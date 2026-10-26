@@ -1,0 +1,63 @@
+schema_version = 1
+
+# d2xq 组件身份。显示/UFS/GENI 等复用 sm-t733 的社区组件（RigoLigoRLC 各仓），
+# 触摸是本设备新增。字段含义见 UniXNU docs/reference/components.md。
+
+[[component]]
+id = "NativeSecTs"
+kind = "driver"
+function = "Samsung sec_ts (Y771_D) touch controller: command flow and 16-byte event decoding"
+scope = "touch"
+repository = "local"
+revision = "local"
+path = "drivers/NativeSecTs"
+hardware = ["SM8150 I2C 0x48", "GPIO 0x57 IRQ", "s2dos05-ldo2/ldo3"]
+os_abi = ["ipados-17.7.11-21H461"]
+board_dependencies = ["GENI I2C SE", "TLMM irq gpio", "SPMI PMIC rails"]
+verified_devices = []
+dependencies = []
+source_files = ["NativeSecTs.c", "NativeSecTs.h"]
+runtime_identifiers = ["NativeSecTs"]
+build_stage = "kernel"
+build = ["build-d2xq-touch.py"]
+outputs = ["build/native-sects/libNativeSecTs.a"]
+
+# 以下组件来自 sm-t733 的组件目录（README 里列了仓库与固定提交），
+# 由 feeds.toml 的 sm8150 源与 UniXNU 自带目录解析；这里只登记用途。
+[[component]]
+id = "NativeMobileDisplay"
+kind = "driver"
+function = "CPU software display, framebuffer copy and presentation"
+scope = "display"
+repository = "https://github.com/RigoLigoRLC/unixnu-nativemobiledisplay.git"
+revision = "ecf382bf084b5df2315dd7f96952a3068def00b3"
+path = "drivers/NativeMobileDisplay"
+hardware = ["SM8150 SDE/DSI", "S6E3HA9 panel"]
+os_abi = ["ipados-17.7.11-21H461"]
+board_dependencies = ["panel init sequence", "DSI controller base"]
+verified_devices = []
+dependencies = []
+source_files = []
+runtime_identifiers = ["NativeMobileDisplay"]
+build_stage = "kernel"
+build = []
+outputs = []
+
+[[component]]
+id = "NativeQcomDsi"
+kind = "driver"
+function = "Qualcomm DSI host controller for panel command/read"
+scope = "display"
+repository = "https://github.com/RigoLigoRLC/unixnu-nativeqcomdsi.git"
+revision = "local"
+path = "drivers/NativeQcomDsi"
+hardware = ["SM8150 DSI0 0xae94000"]
+os_abi = ["ipados-17.7.11-21H461"]
+board_dependencies = ["panel timing", "DSI PHY 0xae94400"]
+verified_devices = []
+dependencies = []
+source_files = []
+runtime_identifiers = ["NativeQcomDsi"]
+build_stage = "kernel"
+build = []
+outputs = []

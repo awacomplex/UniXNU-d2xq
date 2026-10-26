@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+// Samsung Galaxy Note10+ 5G (SM-N9760 / d2xq) board device tree.
+//
+// 数据来源：
+//   - 板级：arch/arm64/boot/dts/samsung/davinci/sm8150-sec-d2xq-chn-overlay-r14.dts
+//   - SoC ：arch/arm64/boot/dts/qcom/sm8150.dtsi
+//   - 实机：D:\port\d2xq\recon（cmdline / meminfo / partitions）
+// 完整面板 init 序列见 kernel-src/panel-s6e3ha9-amb675tg01.dts（12 组命令）。
+
+/dts-v1/;
+
+#include "sm8150.dtsi"
+
+/ {
+    model = "Samsung Galaxy Note10+ 5G (SM-N9760)";
+    compatible = "samsung,d2xq", "qcom,sm8150";
+
+    chosen {
+        // TODO(P0): 待 root 后从 /proc/device-tree/chosen 抄录 bootargs
+    };
+
+    // 实测 DTB（model = "Samsung D2XQ CHN PROJECT Rev14"，compatible = qcom,sm8150-mtp，SM8150 V2）
+    // /memory reg 三段：0x80000000+0x39900000、0x180000000+0x200000000、0xc0000000+0xc0000000
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x39900000>,
+              <0x0 0xc0000000 0x0 0xc0000000>,
+              <0x1 0x80000000 0x2 0x00000000>;
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        // 实机 DTB 关键保留区（完整 34 个见 recon/root/dtb-dump.txt）
+        cont_splash_region: splash@9c400000 {
+            reg = <0x0 0x9c400000 0x0 0x2000000>;
+            no-map;
+        };
+
+        ramoops: ramoops@c1300000 {
+            reg = <0x0 0xc1300000 0x0 0x100000>;
+            no-map;
+        };
+
+        pil_buffer_p2: pil-buffer-p2@a0000000 {
+            reg = <0x0 0xa0000000 0x0 0x1000000>;
+            no-map;
+        };
+
+        pil_buffer_p1: pil-buffer-p1@a1000000 {
+            reg = <0x0 0xa1000000 0x0 0x2c00000>;
+            no-map;
+        };
+
+        modem_region: modem@8d800000 {
+            reg = <0x0 0x8d800000 0x0 0xa000000>;
+            no-map;
+        };
+
+        adsp_region: adsp@99300000 {
+            reg = <0x0 0x99300000 0x0 0x2700000>;
+            no-map;
+        };
+
+        cdsp_region: cdsp@97900000 {
+            reg = <0x0 0x97900000 0x0 0x1a00000>;
+            no-map;
+        };
+
+        qseecom_region: qseecom@a6000000 {
+            reg = <0x0 0xa6000000 0x0 0x1c00000>;
+            no-map;
+        };
+    };
+
+    // 面板：ss_dsi_panel_S6E3HA9_AMB675TG01_WQHD（与实机 cmdline 一致）
+    // 时序来自 davinci overlay r14 的 fragment@127
+    panel: panel@0 {
+        compatible = "samsung,s6e3ha9-amb675tg01";
+        status = "disabled";
+
+        qcom,mdss-dsi-panel-name = "ss_dsi_panel_S6E3HA9_AMB675TG01_WQHD";
+        qcom,mdss-dsi-bpp = <24>;
+        qcom,mdss-dsi-h-pulse-width = <0x2c>;
+        qcom,mdss-dsi-h-back-porch = <0x78>;
+        qcom,mdss-dsi-h-front-porch = <0x74>;
+        qcom,mdss-dsi-v-pulse-width = <0x50>;
+        qcom,mdss-dsi-v-back-porch = <0x7c>;
+        qcom,mdss-dsi-v-front-porch = <0x78>;
+        qcom,mdss-dsi-t-clk-post = <0x18>;
+        qcom,mdss-dsi-t-clk-pre = <0x19>;
+        qcom,mdss-dsi-panel-framerate = <60>;
+        qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+        qcom,mdss-dsi-pixel-packing = "loose";
+        qcom,mdss-dsi-color-order = "rgb_swap_rgb";
+        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+        qcom,mdss-dsi-bl-min-level = <1>;
+        qcom,mdss-dsi-bl-max-level = <0xc350>;
+        qcom,mdss-brightness-default-level = <0x639c>;
+    };
+
+};
+
+// 触摸：sec_ts @ i2c 0x48，挂 qupv3_2 的 i2c@c80000（实测 DT 路径 /soc/i2c@0xc80000/touchscreen@48）
+&i2c_touch {
+    status = "okay";
+
+    touchscreen: touchscreen@48 {
+        compatible = "sec,sec_ts";
+        reg = <0x48>;
+        status = "okay";
+
+        interrupt-parent = <&tlmm>;
+        interrupts = <0x57 0x0>;
+        sec,irq_gpio = <&tlmm 0x57 0x2008>;
+        sec,irq_type = <0x2008>;
+        sec,max_coords = <0x1000 0x1000>;
+        sec,regulator_dvdd = "s2dos05-ldo2";
+        sec,regulator_avdd = "s2dos05-ldo3";
+        sec,regulator_boot_on;
+        sec,project_name = "DAVINCI", "N970";
+        sec,tclm_level = <1>;
+        // 驱动侧确认：CONFIG_TOUCHSCREEN_SEC_TS_Y771_D=y（d2xq_chn_open_defconfig）
+    };
+};

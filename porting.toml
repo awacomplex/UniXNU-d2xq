@@ -1,0 +1,63 @@
+schema_version = 1
+
+[device]
+name = "d2xq"
+soc = "SM8150"
+os_profile = "ipados-17.7.11-21H461"
+summary = "Skeleton device repository for the Samsung Galaxy Note10+ 5G (SM-N9760). Structure follows sm-t733; board values await P0 recon and the SM8150 DTSI from the device kernel source."
+
+[[area]]
+id = "configuration"
+status = "in-progress"
+components = ["ArmDTPlatform", "device"]
+paths = ["board.toml", "feeds.toml", "dts/**", "configs/**", "porting.toml"]
+inputs = ["SM-N9760 uses the SM8150 profile and the iPad7,1 / 17.7.11 / 21H461 restore inputs."]
+configuration = ["Format 2 board with SM8150 SoC source and iPadOS 17.7.11 profile.", "userdata LBA derived from /proc/partitions; GPT verification pending."]
+procedure = ["Fill TODO values from recon/summary.json and the kernel DTSI, then run unixnu status --json."]
+findings = ["Device recon: msmnile, bootloader N9760ZCU6HZE1, UFS 1d84000.ufshc, panel S6E3HA9, touch sec_ts@0x48."]
+completion = ["unixnu status --json resolves device, SoC and OS profile with no missing inputs."]
+limits = ["No root on the device: /proc/device-tree and block sysfs are unreadable, so DRAM span and GPT LBAs are derived rather than measured."]
+next_action = ["Obtain a root shell or offline GPT dump to verify userdata LBAs."]
+evidence = [{ kind = "log", reference = "recon/summary.json", result = "72 partitions, userdata sda33 240,934,892 KB, MemTotal 11,634,912 kB." }]
+
+[[area]]
+id = "firmware"
+status = "not-started"
+components = ["DarwinBoot", "EarlyEntry"]
+paths = ["scripts/**", "proprietary-files.txt"]
+inputs = ["SM8150 UEFI reference from UniXNU-guacamole (Project Aloha SM8150_EFI.fd)."]
+configuration = ["Target Platforms/Samsung/d2xqPkg/d2xq.dsc does not exist yet."]
+procedure = ["Port the Samsung platform package and add the UniXNU/DarwinBoot/payload drivers."]
+findings = ["Samsung has no fastboot: boot.img must be packaged and flashed with Odin."]
+completion = ["Odin-flashed boot.img reaches the UniXNU menu on hardware."]
+limits = []
+next_action = ["Create uefi-d2xq from the SM8150 reference and sm-t733 Samsung packaging."]
+evidence = []
+
+[[area]]
+id = "display"
+status = "not-started"
+components = ["NativeMobileDisplay", "NativeQcomDsi"]
+paths = ["dts/d2xq.dts"]
+inputs = ["Panel S6E3HA9, 1440x3040, from device cmdline."]
+configuration = ["DSI host and panel init sequence not yet written."]
+procedure = ["Reuse sm-t733 NativeQcomDsi/NativeMobileDisplay, replace panel-specific timing."]
+findings = []
+completion = ["Framebuffer shows the UniXNU menu."]
+limits = []
+next_action = ["Extract panel init sequence from vendor kernel or sec_dsim HAL."]
+evidence = []
+
+[[area]]
+id = "touch"
+status = "not-started"
+components = []
+paths = ["dts/d2xq.dts"]
+inputs = ["sec_ts at I2C address 0x48 (device dmesg)."]
+configuration = ["No Samsung touch component exists in the catalog; sm-t733 uses FocalTech."]
+procedure = ["Write NativeSecTs component or adapt the vendor driver."]
+findings = []
+completion = ["Menu responds to taps."]
+limits = []
+next_action = ["Reverse the sec_ts ioctl sequence from vendor blobs."]
+evidence = []

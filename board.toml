@@ -1,0 +1,134 @@
+schema_version = 2
+
+# Samsung Galaxy Note10+ 5G (SM-N9760 / d2xq / SM8150)
+# 骨架：结构照 sm-t733 的 format 2 device repo，数值待 P0 侦察与内核 DTS 核对。
+
+[board]
+name = "d2xq"
+soc = "SM8150"
+soc_source = "sm8150"
+os_profile = "ipados-17.7.11-21H461"
+description = "Samsung Galaxy Note10+ 5G (SM-N9760)"
+kit = "d2xq"
+# example 已移除：d2xq 是真实设备仓库（已填 board/ipsw/userdata/payload 等真实值），
+# 需要 example=false 才能让 `unixnu build` 不触发 refuse_example() 拒绝。
+# 注意：设备尚未"资格化"（硬件参数待 P0 实测核对），bootimg 等步骤仍可能因缺参数失败。
+
+[components]
+include = [
+  # 通用 / 已存在组件（UniXNU components.toml 里有）
+  "ArmDTPlatform", "ArmCpu", "SoftwareAES", "DarwinBoot", "XnuPrelink",
+  "VerifiedRoot", "VirtioMmioBlock", "RamBlock",
+  "GopFramebuffer", "QcomGeniSpi", "AppleKeyStoreState",
+  # TODO(P2): SM8150 专用组件尚无对应仓库，需从 SM7325/SM8550 参考移植或自建：
+  #   NativeUfs(SM8150 UFS 控制器)  — 注意 components.toml 的 ShengUfs 是 SM8550，不能直接用
+  #   NativeQcomDsi / NativeMobileDisplay(SDE+DSI)  — 面板 init 数据待提取
+  #   NativeGeniI2c / NativeQcomSpmi / NativeQcomTsens / NativePmicKeys
+  #   Adreno6xx(Adreno 640 GPU) / NativeUsbDebug / NativeUsbNetwork / EarlyEntry
+]
+
+[device_tree]
+source = "device:dts/d2xq.dts"
+include_dirs = ["soc:dts"]
+
+[ipsw]
+# 与 OS profile 默认一致；profile 更新后可删除本段由 profile 提供
+url = "https://updates.cdn-apple.com/2025SpringFCS/fullrestores/122-77166/DCA6CFE8-90E9-4B92-880D-3DE171798E40/iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw"
+product = "iPad7,1"
+version = "17.7.11"
+build = "21H461"
+device_class = "j120ap"
+chip_id = 0x8011
+board_id = 12
+fetch = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
+
+[userdata]
+# 实测：GPT（4096 字节逻辑扇区，root 下 dd 导出）解析结果。
+first_lba = 2225152
+last_lba = 62458874
+lba_bytes = 4096
+windows = [
+  { name = "OS", component = "OS" },
+  { name = "SystemOS", component = "Cryptex1,SystemOS" },
+]
+
+[kernel]
+defconfig = "d2xq_defconfig"
+config_fragments = ["arch:configs/common.config", "soc:configs/sm8150.config", "os:configs/ipados.config"]
+patch_series = ["arch:patches/xnu/series", "soc:patches/xnu/series", "os:patches/xnu/series", "device:patches/xnu/series"]
+archives = [
+  # 通用内核组件（脚本均在 UniXNU scripts/，组件均在上方 include 列表）
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+  "component:ArmDTPlatform",
+  "component:ArmCpu",
+  "component:SoftwareAES",
+  "build-software-aes-bindings.py",
+  "component:VirtioMmioBlock",
+  "component:RamBlock",
+  "build-virtio-mmio-bindings.py --component RamBlock --directory build/ram-block",
+  "build-virtio-mmio-bindings.py --component VirtioMmioBlock",
+  "build-mockfs-fixture.py",
+  "build-libpthread-kernel.py",
+  "component:AppleKeyStoreState",
+  # TODO(P2): SM8150 专用组件 archive（UFS/DSI/触摸/SPMI/PMIC keys/GPU 等）待补
+]
+
+# [kernel.prelink] is intentionally omitted: the ipados-17.7.11-21H461 OS
+# profile provides the complete prelink block (tool=kits/XnuPrelink, kernel,
+# slide, early_security_init, roots, kernelcache_sha256).  Declaring a partial
+# block here only overrode the correct tool with the legacy NativePrelink path.
+
+[firmware]
+config = "d2xq"
+dsc = "Platforms/Samsung/d2xqPkg/d2xq.dsc"
+fd = "Build/d2xqPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+preflight = []
+submodules = ["Common/Mu", "Common/Mu_OEM_Sample", "Silicium-ACPI", "Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl"]
+patches = ["Resources/MuPatches/Gic-Spurious.patch"]
+packages = [
+  "{uefi}", "{uefi}/Platforms/Samsung", "{tree}/package",
+  "{tree}/drivers/DarwinBoot", "{edk2}", "{uefi}/Common/Mu",
+  "{uefi}/Common/Mu_OEM_Sample", "{uefi}/Silicon/Qualcomm",
+  "{uefi}/Silicon/Silicium", "{uefi}/Silicium-ACPI",
+  "{uefi}/Silicium-ACPI/Platforms/Samsung", "{uefi}/Silicium-ACPI/Silicon/Qualcomm",
+]
+
+[firmware.defines]
+ENABLE_SECUREBOOT = "1"
+DEVICE_MODEL = "d2xq"
+MEMORY_PROTECTION = "TRUE"
+SHIP_MODE = "FALSE"
+BUILDID_STRING = "d2xq-research"
+
+[payload]
+volume = "D2XQESP"
+size_mib = 256
+loader = "firmware"
+title = "Boot UniXNU"
+timeout = -1
+dram_size = 0x300000000          # 12 GiB：DTB /memory 三段合计 0x0.39900000 + 0x2_00000000 + 0x0.c0000000
+panic_screen = true
+kernel_args = [
+  "-v", "serial=3", "debug=0x14e",
+  "offline-legacy-register=1", "offline-hid-home=1", "offline-hid-input=1",
+  "native-ufs-root=1", "armcpu-spi-ipi=1", "-no_slto_panic",
+  # TODO(P4): 去掉 sheng-* 前缀参数，换成 d2xq 自己的实现或删除
+]
+
+[payload.adt]
+chip_id = "9760"                  # 软件身份种子，非 Apple 芯片 ID
+cpu_regs = "0,0x100,0x200,0x300,0x400,0x500,0x600,0x700"
+psci_method = "smc"
+owned_memory_size = "auto"
+root_match_volume_uuid = "00000000-0000-0000-0000-000000000000"   # TODO(P4): 取 userdata 中 OS 卷 UUID
+packed_data_ramdisk = true
+unique_chip_id = "required"
+
+[[bootimg.dtb_node]]
+path = "/reserved-memory/splash_region"
+props = [
+  { name = "label", type = "s", value = "cont_splash_region" },
+  # 实测 DTB：/reserved-memory/cont_splash_region = 0x9c400000 + 0x2000000
+  { name = "reg", type = "x", value = ["0x0", "0x9c400000", "0x0", "0x2000000"] },
+]

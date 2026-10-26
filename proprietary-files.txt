@@ -1,0 +1,14 @@
+# d2xq proprietary files
+# 从实机 /vendor 提取；格式：目标路径|来源|sha256（待补）
+
+# 触摸 / 显示
+vendor/lib64/libdisplayqos.so
+vendor/lib64/libdisplaydebug.so
+vendor/lib64/vendor.display.postproc@1.0.so
+vendor/lib64/vendor.qti.hardware.display.composer@2.0.so
+
+# 指纹（三星 3.0 HAL）
+vendor/lib64/vendor.samsung.hardware.biometrics.fingerprint@3.0.so
+
+# TODO(P3): sec_ts 触摸固件与 HAL、面板固件（如有）
+# TODO(P3): 用 tools/ 下的脚本生成 sha256 后再提交

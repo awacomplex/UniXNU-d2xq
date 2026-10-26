@@ -1,0 +1,5 @@
+# d2xq 设备特有内核配置。
+# 通用项已由 config_fragments 提供（arch:configs/common.config、
+# soc:configs/sm8150.config、os:configs/ipados.config），这里只放设备级覆盖/追加。
+# TODO(P1): 从 d2xq 内核仓库 arch/arm64/configs/ 的厂商 defconfig 摘取设备特有项
+# TODO(P2): SM8150 专用组件开发完成后，在此追加设备级 CONFIG

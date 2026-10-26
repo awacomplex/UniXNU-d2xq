@@ -1,0 +1,7 @@
+# d2xq device repository feeds.
+# 开发期先指向本地 sm8150 common；定稿后改成 git + commit 固定。
+
+[[source]]
+name = "sm8150"
+kind = "soc"
+local = "../UniXNU-sm8150-common"
