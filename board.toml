@@ -68,6 +68,8 @@ archives = [
   "build-software-aes-bindings.py",
   "component:VirtioMmioBlock",
   "component:RamBlock",
+  # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
+  "component:ShengUfs",
   # build-virtio-mmio-bindings.py 需要 build/storage-abi/interface-audit.json，
   # 而该文件只能由 audit-storage-interface.py 用「真机 guest 元数据 + 原始内核」
   # 生成（见 prepare-storage-headers.py 的说明）。bring-up 阶段没有这些资格证据，
@@ -78,7 +80,7 @@ archives = [
   "build-mockfs-fixture.py",
   "build-libpthread-kernel.py",
   "component:AppleKeyStoreState",
-  # TODO(P2): SM8150 专用组件 archive（UFS/DSI/触摸/SPMI/PMIC keys/GPU 等）待补
+  # TODO(P2): 其余 SM8150 专用组件 archive（DSI/触摸/SPMI/PMIC keys/GPU 等）待补
 ]
 
 # [kernel.prelink] is intentionally omitted: the ipados-17.7.11-21H461 OS
