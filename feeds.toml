@@ -10,5 +10,5 @@
 [[source]]
 name = "sm8150"
 kind = "soc"
-git = "https://github.com/YOUR_GITHUB_USERNAME/UniXNU-sm8150-common.git"
-commit = "YOUR_COMMIT_HASH"
+git = "https://github.com/awacomplex/UniXNU-sm8150-common.git"
+commit = "54539842904b97986b6e658cef2d540d37dfaefb"
