@@ -20,8 +20,10 @@ include = [
   "ArmDTPlatform", "ArmCpu", "SoftwareAES", "DarwinBoot", "XnuPrelink",
   "VerifiedRoot", "VirtioMmioBlock", "RamBlock",
   "GopFramebuffer", "QcomGeniSpi", "AppleKeyStoreState",
-  # TODO(P2): SM8150 专用组件尚无对应仓库，需从 SM7325/SM8550 参考移植或自建：
-  #   NativeUfs(SM8150 UFS 控制器)  — 注意 components.toml 的 ShengUfs 是 SM8550，不能直接用
+  # UFS 存储（官方 ShengUfs 组件，repository 已指向 fork 的 sm8150 分支，
+  # 含 kSm8150Ufs 多 SoC 支持）
+  "ShengUfs",
+  # TODO(P2): 其余 SM8150 组件待移植/启用：
   #   NativeQcomDsi / NativeMobileDisplay(SDE+DSI)  — 面板 init 数据待提取
   #   NativeGeniI2c / NativeQcomSpmi / NativeQcomTsens / NativePmicKeys
   #   Adreno6xx(Adreno 640 GPU) / NativeUsbDebug / NativeUsbNetwork / EarlyEntry
