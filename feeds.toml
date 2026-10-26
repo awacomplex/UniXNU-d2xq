@@ -1,7 +1,14 @@
 # d2xq device repository feeds.
-# 开发期先指向本地 sm8150 common；定稿后改成 git + commit 固定。
+#
+# sm8150 SoC 仓库：GitHub Actions 编译会从 git 自动 fetch。
+# 本地开发如需用本地副本，用命令行覆盖（无需改这里）：
+#   ./unixnu ... --local-module soc:sm8150=../UniXNU-sm8150-common
+#
+# 注意：下面 git 地址和 commit 需先 push UniXNU-sm8150-common 到 GitHub 后，
+# 再替换成你的真实 owner 名和 commit hash。
 
 [[source]]
 name = "sm8150"
 kind = "soc"
-local = "../UniXNU-sm8150-common"
+git = "https://github.com/YOUR_GITHUB_USERNAME/UniXNU-sm8150-common.git"
+commit = "YOUR_COMMIT_HASH"
