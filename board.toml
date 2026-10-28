@@ -120,17 +120,20 @@ dram_size = 0x300000000          # 12 GiB：DTB /memory 三段合计 0x0.3990000
 panic_screen = true
 kernel_args = [
   "-v", "serial=3", "debug=0x14e",
-  "offline-legacy-register=1", "offline-hid-home=1", "offline-hid-input=1",
-  "native-ufs-root=1", "armcpu-spi-ipi=1", "-no_slto_panic",
-  # TODO(P4): 去掉 sheng-* 前缀参数，换成 d2xq 自己的实现或删除
+  "-no_slto_panic",
+  # P4b 最小验证：只保留诊断参数。
+  # 去掉 native-ufs-root=1（check_native_root 要求 sheng-pmgr=2，d2xq 尚无 PMGR 集成）、
+  # armcpu-spi-ipi=1（SMP IPI 参数待确认，SM8150 GICv3 可能需 redist-ipi）、
+  # offline-*（sheng 特有）。验证 kernel.macho 能启动后，P4c 再加回 native-ufs-root + PMGR。
 ]
 
 [payload.adt]
 chip_id = "9760"                  # 软件身份种子，非 Apple 芯片 ID
 cpu_regs = "0,0x100,0x200,0x300,0x400,0x500,0x600,0x700"
 psci_method = "smc"
-owned_memory_size = "auto"
-root_match_volume_uuid = "00000000-0000-0000-0000-000000000000"   # TODO(P4): 取 userdata 中 OS 卷 UUID
+# P4b 暂不设 owned_memory_size（generate 要求 256MiB~8GiB 具体值，不支持 "auto"；
+# 不设则不加 darwinboot-memory-size，XNU 用默认内存配置）
+# P4b 暂不设 root_match_volume_uuid（不引导 root，避免全 0 UUID 误匹配）
 packed_data_ramdisk = true
 unique_chip_id = "required"
 

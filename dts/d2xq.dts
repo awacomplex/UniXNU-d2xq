@@ -9,7 +9,7 @@
 
 /dts-v1/;
 
-#include "sm8150.dtsi"
+/include/ "sm8150.dtsi"
 
 / {
     model = "Samsung Galaxy Note10+ 5G (SM-N9760)";
@@ -20,12 +20,12 @@
     };
 
     // 实测 DTB（model = "Samsung D2XQ CHN PROJECT Rev14"，compatible = qcom,sm8150-mtp，SM8150 V2）
-    // /memory reg 三段：0x80000000+0x39900000、0x180000000+0x200000000、0xc0000000+0xc0000000
+    // /memory 三段：0x80000000+0x39900000、0xc0000000+0xc0000000、0x180000000+0x200000000。
+    // ADT handoff 要求"一段连续 DRAM"，故合并为 0x80000000 起 0x300000000（12 GiB）的连续跨度
+    //（中间含保留洞，DarwinBoot 运行时选 UEFI conventional memory，同 sm-t733 做法）。
     memory@80000000 {
         device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x39900000>,
-              <0x0 0xc0000000 0x0 0xc0000000>,
-              <0x1 0x80000000 0x2 0x00000000>;
+        reg = <0x0 0x80000000 0x3 0x00000000>;
     };
 
     reserved-memory {
