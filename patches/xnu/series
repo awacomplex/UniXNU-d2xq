@@ -1,2 +1,3 @@
 # d2xq XNU patch series — 设备级补丁（每行一个，按应用顺序）
 # TODO(P1): 从 SM7325/SM8550 参考移植 SM8150 平台补丁后在此列出
+0001-bzero-no-dc-zva.patch

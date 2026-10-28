@@ -1,0 +1,18 @@
+warning: in the working copy of 'bz-orig/osfmk/arm64/bzero.s', LF will be replaced by CRLF the next time Git touches it
+diff --git a/osfmk/arm64/bzero.s b/osfmk/arm64/bzero.s
+index a7abca2..d310af8 100644
+--- a/osfmk/arm64/bzero.s
++++ b/osfmk/arm64/bzero.s
+@@ -76,7 +76,10 @@ L_bzeroLarge:
+     add     x4,      x3, #64  // end of first cacheline to zero
+     subs    x2,      x2, x4   // if the end of the buffer comes first, jump
+     b.ls    1f                //    directly to the cleanup pass.
+-0:  dc      zva,     x3       // zero cacheline
++0:  stp     x1, x1, [x3]       // d2xq: no dc zva for 4 KiB pmap (see PORTING-STATUS)
++    stp     x1, x1, [x3, #16]
++    stp     x1, x1, [x3, #32]
++    stp     x1, x1, [x3, #48]
+     add     x3,      x3, #64  // increment pointer
+     subs    x2,      x2, #64  // decrement length
+     b.hi    0b
+
