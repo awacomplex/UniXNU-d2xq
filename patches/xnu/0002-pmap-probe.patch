@@ -1,0 +1,33 @@
+warning: in the working copy of 'pmap-orig/osfmk/arm/pmap/pmap.c', LF will be replaced by CRLF the next time Git touches it
+diff --git a/osfmk/arm/pmap/pmap.c b/osfmk/arm/pmap/pmap.c
+index ecfe441..00a4c2c 100644
+--- a/osfmk/arm/pmap/pmap.c
++++ b/osfmk/arm/pmap/pmap.c
+@@ -6534,6 +6534,10 @@ pmap_enter_options_addr(
+ 	return kr;
+ }
+ 
++/* d2xq diagnostic: ring of pmap_enter_options calls (va, pa, prot, caller, pmap). */
++volatile unsigned long d2xq_pmap_ring[2048][5];
++volatile unsigned int  d2xq_pmap_idx;
++
+ kern_return_t
+ pmap_enter_options(
+ 	pmap_t pmap,
+@@ -6546,6 +6550,14 @@ pmap_enter_options(
+ 	unsigned int options,
+ 	__unused void   *arg)
+ {
++	{
++		unsigned int slot = d2xq_pmap_idx++ & 2047;
++		d2xq_pmap_ring[slot][0] = (unsigned long)v;
++		d2xq_pmap_ring[slot][1] = ((unsigned long)pn) << PAGE_SHIFT;
++		d2xq_pmap_ring[slot][2] = (unsigned long)prot;
++		d2xq_pmap_ring[slot][3] = (unsigned long)__builtin_return_address(0);
++		d2xq_pmap_ring[slot][4] = (unsigned long)pmap;
++	}
+ 	return pmap_enter_options_addr(pmap, v, ((pmap_paddr_t)pn) << PAGE_SHIFT, prot, fault_type, flags, wired, options, arg);
+ }
+ 
+
+
