@@ -36,7 +36,7 @@ jobs:
               return x0;
           }
 
-          __attribute__((used, noreturn)) void _start(void)
+          __attribute__((used, noreturn)) void start(void)
           {
               static const char msg[] = "d2xq: userspace reached\n";
               d2xq_syscall3(4, 1, (long)msg, sizeof(msg) - 1);
@@ -45,9 +45,8 @@ jobs:
               }
           }
           EOF
-          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
-          clang $CF -Wl,-e,_start out/launchd.c -o out/launchd || \
-            clang $CF -Wl,-e,__start out/launchd.c -o out/launchd
+          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-static -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
+          clang $CF -Wl,-e,_start out/launchd.c -o out/launchd
           file out/launchd
           otool -hv out/launchd | tail -2
 
