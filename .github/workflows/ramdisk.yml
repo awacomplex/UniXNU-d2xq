@@ -59,7 +59,7 @@ jobs:
           cp out/launchd out/root/sbin/launchd
           chmod 755 out/root/sbin/launchd
           # Build the whole volume in one shot, so APFS commits everything itself.
-          hdiutil create -size 128m -fs APFS -volname d2xq \
+          hdiutil create -size 128m -fs APFS -volname d2xq -layout NONE \
             -srcfolder out/root -format UDRW -ov out/ramdisk.dmg
           DEV=$(hdiutil attach -nomount out/ramdisk.dmg | head -1 | awk '{print $1}')
           echo "device=$DEV"
