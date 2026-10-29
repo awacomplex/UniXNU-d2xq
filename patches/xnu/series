@@ -5,3 +5,4 @@
 0003-oskext-summary-realloc.patch
 0004-ipi-noop-nonapple.patch
 0005-smp-skip-aic-pmgr.patch
+0006-smp-stage-markers.patch
