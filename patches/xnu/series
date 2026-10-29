@@ -6,3 +6,4 @@
 0004-ipi-noop-nonapple.patch
 0005-smp-skip-aic-pmgr.patch
 0006-smp-stage-markers.patch
+0007-smp-early-markers.patch
