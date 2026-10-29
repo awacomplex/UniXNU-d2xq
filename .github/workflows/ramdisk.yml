@@ -1,0 +1,82 @@
+name: d2xq ramdisk
+
+# Builds a minimal APFS ramdisk containing a freestanding arm64 Mach-O
+# /sbin/launchd, for the XNU bring-up milestone "kernel reaches userspace".
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/ramdisk.yml'
+
+jobs:
+  ramdisk:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Show toolchain
+        run: |
+          sw_vers
+          clang --version
+          newfs_apfs -h 2>&1 | head -5 || true
+
+      - name: Build freestanding arm64 launchd
+        run: |
+          set -e
+          mkdir -p out
+          cat > out/launchd.c <<'EOF'
+          typedef unsigned long u64;
+
+          static long d2xq_syscall3(long num, long a, long b, long c)
+          {
+              register long x16 __asm__("x16") = num;
+              register long x0 __asm__("x0") = a;
+              register long x1 __asm__("x1") = b;
+              register long x2 __asm__("x2") = c;
+              __asm__ volatile ("svc #0x80" : "+r"(x0) : "r"(x16), "r"(x1), "r"(x2) : "memory");
+              return x0;
+          }
+
+          __attribute__((used, noreturn)) void _start(void)
+          {
+              static const char msg[] = "d2xq: userspace reached\n";
+              d2xq_syscall3(4, 1, (long)msg, sizeof(msg) - 1);
+              for (;;) {
+                  d2xq_syscall3(1, 0, 0, 0);
+              }
+          }
+          EOF
+          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
+          clang $CF -Wl,-e,_start out/launchd.c -o out/launchd || \
+            clang $CF -Wl,-e,__start out/launchd.c -o out/launchd
+          file out/launchd
+          otool -hv out/launchd | tail -2
+
+      - name: Create raw APFS image and install launchd
+        run: |
+          set -e
+          rm -f out/ramdisk.img
+          dd if=/dev/zero of=out/ramdisk.img bs=1m count=128
+          DEV=$(hdiutil attach -nomount -imagekey diskimage-class=CRawDiskImage out/ramdisk.img | head -1 | awk '{print $1}')
+          echo "device=$DEV"
+          newfs_apfs -v d2xq "$DEV"
+          hdiutil detach "$DEV" || diskutil unmountDisk "$DEV" || true
+          hdiutil attach -imagekey diskimage-class=CRawDiskImage out/ramdisk.img
+          echo "--- volumes ---"
+          ls -l /Volumes
+          MOUNT=/Volumes/d2xq
+          test -d "$MOUNT"
+          mkdir -p "$MOUNT/sbin"
+          cp out/launchd "$MOUNT/sbin/launchd"
+          chmod 755 "$MOUNT/sbin/launchd"
+          ls -l "$MOUNT/sbin/launchd"
+          sync
+          hdiutil detach "$MOUNT" -force || hdiutil detach /Volumes/d2xq -force
+          ls -lh out/ramdisk.img
+          xxd -l 64 out/ramdisk.img
+
+      - name: Upload ramdisk
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2xq-ramdisk
+          path: out/ramdisk.img
+          if-no-files-found: error
