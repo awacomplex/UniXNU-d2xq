@@ -54,34 +54,26 @@ jobs:
       - name: Create raw APFS image and install launchd
         run: |
           set -e
-          rm -f out/ramdisk.img
-          dd if=/dev/zero of=out/ramdisk.img bs=1m count=128
-          DEV=$(hdiutil attach -nomount -imagekey diskimage-class=CRawDiskImage out/ramdisk.img | head -1 | awk '{print $1}')
+          rm -rf out/root out/ramdisk.dmg out/ramdisk.img
+          mkdir -p out/root/sbin
+          cp out/launchd out/root/sbin/launchd
+          chmod 755 out/root/sbin/launchd
+          # Build the whole volume in one shot, so APFS commits everything itself.
+          hdiutil create -size 128m -fs APFS -volname d2xq \
+            -srcfolder out/root -format UDRW -ov out/ramdisk.dmg
+          DEV=$(hdiutil attach -nomount out/ramdisk.dmg | head -1 | awk '{print $1}')
           echo "device=$DEV"
-          newfs_apfs -v d2xq "$DEV"
-          hdiutil detach "$DEV" || diskutil unmountDisk "$DEV" || true
-          hdiutil attach -imagekey diskimage-class=CRawDiskImage out/ramdisk.img
-          echo "--- volumes ---"
-          ls -l /Volumes
-          MOUNT=/Volumes/d2xq
-          test -d "$MOUNT"
-          mkdir -p "$MOUNT/sbin" "$MOUNT/usr/appleinternal/sbin"
-          cp out/launchd "$MOUNT/sbin/launchd"
-          chmod 755 "$MOUNT/sbin/launchd"
-          cp out/launchd "$MOUNT/usr/appleinternal/sbin/launchd.development"
-          chmod 755 "$MOUNT/usr/appleinternal/sbin/launchd.development"
-          ls -l "$MOUNT/sbin/launchd"
-          sync
-          sync
-          sleep 2
-          # clean detach so the file data and inode metadata are committed
-          hdiutil detach "$MOUNT"
-          # verify: remount the image and compare the file byte for byte
+          # Copy the raw bytes out of the block device (no DMG trailer).
+          dd if="$DEV" of=out/ramdisk.img bs=1m
+          hdiutil detach "$DEV" -force
+          ls -lh out/ramdisk.img
+          # Verify: mount the raw file back and compare the file.
+          DEV2=$(hdiutil attach -nomount -imagekey diskimage-class=CRawDiskImage out/ramdisk.img | head -1 | awk '{print $1}')
+          echo "verify device=$DEV2"
           hdiutil attach -imagekey diskimage-class=CRawDiskImage out/ramdisk.img
           ls -l /Volumes/d2xq/sbin/launchd
           cmp out/launchd /Volumes/d2xq/sbin/launchd && echo "VERIFY: launchd matches"
           hdiutil detach /Volumes/d2xq
-          ls -lh out/ramdisk.img
           xxd -l 64 out/ramdisk.img
       - name: Upload ramdisk
         uses: actions/upload-artifact@v4
