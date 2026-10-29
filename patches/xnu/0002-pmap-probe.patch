@@ -1,8 +1,33 @@
 diff --git a/osfmk/arm/pmap/pmap.c b/osfmk/arm/pmap/pmap.c
-index 7b8ccd4..f7cc1f1 100644
+index 7b8ccd4..146826e 100644
 --- a/osfmk/arm/pmap/pmap.c
 +++ b/osfmk/arm/pmap/pmap.c
-@@ -6547,6 +6547,10 @@ pmap_enter_options_addr(
+@@ -5303,6 +5303,10 @@ pmap_has_prot_policy(__unused pmap_t pmap, __unused bool translated_allow_execut
+  *	VERY IMPORTANT: Will not increase permissions.
+  *	VERY IMPORTANT: Only pmap_enter() is allowed to grant permissions.
+  */
++/* d2xq diagnostic: ring of pmap_protect calls. */
++volatile unsigned long d2xq_pmap_prot_ring[1024][4];
++volatile unsigned int  d2xq_pmap_prot_idx;
++
+ void
+ pmap_protect(
+ 	pmap_t pmap,
+@@ -5310,6 +5314,13 @@ pmap_protect(
+ 	vm_map_address_t e,
+ 	vm_prot_t prot)
+ {
++	{
++		unsigned int slot = d2xq_pmap_prot_idx++ & 1023;
++		d2xq_pmap_prot_ring[slot][0] = (unsigned long)b;
++		d2xq_pmap_prot_ring[slot][1] = (unsigned long)e;
++		d2xq_pmap_prot_ring[slot][2] = (unsigned long)prot;
++		d2xq_pmap_prot_ring[slot][3] = (unsigned long)__builtin_return_address(0);
++	}
+ 	pmap_protect_options(pmap, b, e, prot, 0, NULL);
+ }
+ 
+@@ -6547,6 +6558,10 @@ pmap_enter_options_addr(
  	return kr;
  }
  
@@ -13,7 +38,7 @@ index 7b8ccd4..f7cc1f1 100644
  kern_return_t
  pmap_enter_options(
  	pmap_t pmap,
-@@ -6560,6 +6564,14 @@ pmap_enter_options(
+@@ -6560,6 +6575,14 @@ pmap_enter_options(
  	__unused void   *arg,
  	pmap_mapping_type_t mapping_type)
  {
