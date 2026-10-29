@@ -1,18 +1,3 @@
-warning: in the working copy of 'd2xqfs-base-mini/bsd/conf/files', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'd2xqfs-base-mini/bsd/kern/bsd_init.c', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'd2xqfs-work-mini/bsd/kern/d2xqfs.c', LF will be replaced by CRLF the next time Git touches it
-diff --git a/bsd/conf/files b/bsd/conf/files
-index 19b4065..5b00a93 100644
---- a/bsd/conf/files
-+++ b/bsd/conf/files
-@@ -391,6 +391,7 @@ bsd/kern/kern_guarded.c			standard
- bsd/kern/kern_event.c			standard
- bsd/kern/kern_control.c			optional networking
- bsd/kern/kern_exec.c			standard
-+bsd/kern/d2xqfs.c			standard
- bsd/kern/kern_exit.c			standard
- bsd/kern/kern_ktrace.c			standard
- bsd/kern/kern_lockf.c			standard
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
 index 37017cf..08fd9f0 100644
 --- a/bsd/kern/bsd_init.c
@@ -34,12 +19,14 @@ index 37017cf..08fd9f0 100644
  #if CONFIG_NETBOOT
  		netboot = (mountroot == netboot_mountroot);
  #endif
-diff --git a/d2xqfs-work-mini/bsd/kern/d2xqfs.c b/bsd/kern/d2xqfs.c
-new file mode 100644
-index 0000000..dfff91c
---- /dev/null
-+++ b/bsd/kern/d2xqfs.c
-@@ -0,0 +1,675 @@
+diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
+index 5b91579..32c2c0d 100644
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -8956,3 +8956,678 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+ }
+ 
+ EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
 +/*
 + * d2xqfs: a read-only synthetic filesystem that serves one executable held in
 + * the kernel image.  It exists so that a Darwin port can reach userspace
