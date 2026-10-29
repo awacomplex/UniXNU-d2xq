@@ -1,0 +1,31 @@
+diff --git a/iokit/Kernel/arm/AppleARMSMP.cpp b/iokit/Kernel/arm/AppleARMSMP.cpp
+index 074fa6d..e8f6a47 100644
+--- a/iokit/Kernel/arm/AppleARMSMP.cpp
++++ b/iokit/Kernel/arm/AppleARMSMP.cpp
+@@ -172,6 +172,13 @@ cpu_boot_thread(void */*unused0*/, wait_result_t /*unused1*/)
+ 	int d2xq_smp_stage = 0;
+ 	PE_parse_boot_argn("d2xq_smp", &d2xq_smp_stage, sizeof(d2xq_smp_stage));
+ 
++	if (d2xq_smp_stage == 4) {
++		panic("D2XQ SMP: cpu_boot_thread entered");
++	}
++	if (d2xq_smp_stage == 5) {
++		panic("D2XQ SMP: IOPlatformExpert matched");
++	}
++
+ #if XNU_CLUSTER_POWER_DOWN
+ 	cluster_power_supported = true;
+ 	/*
+@@ -255,6 +262,12 @@ void
+ IOCPUInitialize(void)
+ {
+ 	topology_info = ml_get_topology_info();
++
++	int d2xq_smp_stage = 0;
++	PE_parse_boot_argn("d2xq_smp", &d2xq_smp_stage, sizeof(d2xq_smp_stage));
++	if (d2xq_smp_stage == 6) {
++		panic("D2XQ SMP: IOCPUInitialize called");
++	}
+ 	boot_cpu = topology_info->boot_cpu->cpu_id;
+ 
+ 	for (unsigned int i = 0; i < topology_info->num_clusters; i++) {
