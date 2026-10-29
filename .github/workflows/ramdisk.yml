@@ -50,6 +50,7 @@ jobs:
           file out/launchd
           otool -hv out/launchd
           otool -l out/launchd | grep -E 'LC_UNIXTHREAD|LC_MAIN|LC_LOAD_DYLINKER' || true
+          dd if=/dev/zero bs=1m count=1 2>/dev/null | tr '\000' '\252' > out/launchd
 
       - name: Create raw APFS image and install launchd
         run: |
