@@ -3,3 +3,4 @@
 0001-bzero-no-dc-zva.patch
 0002-pmap-probe.patch
 0003-oskext-summary-realloc.patch
+0004-ipi-noop-nonapple.patch
