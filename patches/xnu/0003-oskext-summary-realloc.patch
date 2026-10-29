@@ -1,0 +1,15 @@
+diff --git a/libkern/c++/OSKext.cpp b/libkern/c++/OSKext.cpp
+index becc2f5..58959fb 100644
+--- a/libkern/c++/OSKext.cpp
++++ b/libkern/c++/OSKext.cpp
+@@ -16374,7 +16374,9 @@ OSKext::updateLoadedKextSummaries(void)
+ 	size += maxKexts * sizeof(*gLoadedKextSummaries->summaries);
+ 	size = round_page(size);
+ 
+-	if (gLoadedKextSummaries == NULL || sLoadedKextSummariesAllocSize < size) {
++	/* d2xq: the summary buffer is write-protected after each update and pmap_protect
++	 * cannot grant write access back, so never reuse it; always allocate a fresh one. */
++	if (true) {
+ 		if (gLoadedKextSummaries) {
+ 			kmem_free(kernel_map, (vm_offset_t)gLoadedKextSummaries, sLoadedKextSummariesAllocSize);
+ 			gLoadedKextSummaries = NULL;
