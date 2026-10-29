@@ -45,7 +45,7 @@ jobs:
               }
           }
           EOF
-          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-static -Wl,-no_pie -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
+          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-static -Wl,-no_pie -Wl,-image_base,0x10000 -Wl,-pagezero_size,0 -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
           clang $CF -Wl,-e,_start out/launchd.c -o out/launchd
           file out/launchd
           otool -hv out/launchd
