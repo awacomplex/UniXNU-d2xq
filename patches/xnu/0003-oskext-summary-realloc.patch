@@ -1,8 +1,8 @@
 diff --git a/libkern/c++/OSKext.cpp b/libkern/c++/OSKext.cpp
-index becc2f5..58959fb 100644
+index becc2f5..f826dd3 100644
 --- a/libkern/c++/OSKext.cpp
 +++ b/libkern/c++/OSKext.cpp
-@@ -16374,7 +16374,9 @@ OSKext::updateLoadedKextSummaries(void)
+@@ -16374,9 +16374,12 @@ OSKext::updateLoadedKextSummaries(void)
  	size += maxKexts * sizeof(*gLoadedKextSummaries->summaries);
  	size = round_page(size);
  
@@ -11,5 +11,9 @@ index becc2f5..58959fb 100644
 +	 * cannot grant write access back, so never reuse it; always allocate a fresh one. */
 +	if (true) {
  		if (gLoadedKextSummaries) {
- 			kmem_free(kernel_map, (vm_offset_t)gLoadedKextSummaries, sLoadedKextSummariesAllocSize);
+-			kmem_free(kernel_map, (vm_offset_t)gLoadedKextSummaries, sLoadedKextSummariesAllocSize);
++			/* d2xq: leak instead of freeing; the free path appears to write-protect
++			 * a page that is still a live kernel stack. */
  			gLoadedKextSummaries = NULL;
+ 			gLoadedKextSummariesTimestamp = mach_absolute_time();
+ 			sLoadedKextSummariesAllocSize = 0;
