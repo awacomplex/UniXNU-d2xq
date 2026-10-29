@@ -1,35 +1,35 @@
 diff --git a/osfmk/arm/pmap/pmap.c b/osfmk/arm/pmap/pmap.c
-index 7b8ccd4..47e68c9 100644
+index 7b8ccd4..b4e7cef 100644
 --- a/osfmk/arm/pmap/pmap.c
 +++ b/osfmk/arm/pmap/pmap.c
-@@ -5312,6 +5312,11 @@ pmap_protect(
- {
- 	pmap_protect_options(pmap, b, e, prot, 0, NULL);
+@@ -5561,6 +5561,11 @@ pmap_protect_options_internal(
+ 	return va;
  }
-+/* d2xq diagnostic: shared sequence and pmap_protect ring. */
+ 
++/* d2xq diagnostic: shared sequence and pmap_protect_options ring. */
 +volatile unsigned long d2xq_pmap_seq;
 +volatile unsigned long d2xq_pmap_prot_ring[1024][6];
 +volatile unsigned int  d2xq_pmap_prot_idx;
 +
- 
- MARK_AS_PMAP_TEXT vm_map_address_t
- pmap_protect_options_internal(
-@@ -5322,6 +5327,15 @@ pmap_protect_options_internal(
+ void
+ pmap_protect_options(
+ 	pmap_t pmap,
+@@ -5570,6 +5575,15 @@ pmap_protect_options(
  	unsigned int options,
  	__unused void *args)
  {
 +	{
 +		unsigned int slot = d2xq_pmap_prot_idx++ & 1023;
 +		d2xq_pmap_prot_ring[slot][0] = d2xq_pmap_seq++;
-+		d2xq_pmap_prot_ring[slot][1] = (unsigned long)start;
-+		d2xq_pmap_prot_ring[slot][2] = (unsigned long)end;
++		d2xq_pmap_prot_ring[slot][1] = (unsigned long)b;
++		d2xq_pmap_prot_ring[slot][2] = (unsigned long)e;
 +		d2xq_pmap_prot_ring[slot][3] = (unsigned long)prot;
 +		d2xq_pmap_prot_ring[slot][4] = (unsigned long)options;
 +		d2xq_pmap_prot_ring[slot][5] = (unsigned long)__builtin_return_address(0);
 +	}
- 	tt_entry_t      *tte_p;
- 	pt_entry_t      *bpte_p, *epte_p;
- 	pt_entry_t      *pte_p;
+ 	vm_map_address_t l, beg;
+ 
+ 	__unused const pt_attr_t * const pt_attr = pmap_get_pt_attr(pmap);
 @@ -6547,6 +6561,10 @@ pmap_enter_options_addr(
  	return kr;
  }
