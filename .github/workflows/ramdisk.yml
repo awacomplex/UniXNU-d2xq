@@ -45,10 +45,11 @@ jobs:
               }
           }
           EOF
-          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-static -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
+          CF="--target=arm64-apple-macos11 -nostdlib -Wl,-static -Wl,-no_pie -Wl,-platform_version -Wl,macos -Wl,11.0 -Wl,11.0 -O2"
           clang $CF -Wl,-e,_start out/launchd.c -o out/launchd
           file out/launchd
-          otool -hv out/launchd | tail -2
+          otool -hv out/launchd
+          otool -l out/launchd | grep -E 'LC_UNIXTHREAD|LC_MAIN|LC_LOAD_DYLINKER' || true
 
       - name: Create raw APFS image and install launchd
         run: |
@@ -64,9 +65,11 @@ jobs:
           ls -l /Volumes
           MOUNT=/Volumes/d2xq
           test -d "$MOUNT"
-          mkdir -p "$MOUNT/sbin"
+          mkdir -p "$MOUNT/sbin" "$MOUNT/usr/appleinternal/sbin"
           cp out/launchd "$MOUNT/sbin/launchd"
           chmod 755 "$MOUNT/sbin/launchd"
+          cp out/launchd "$MOUNT/usr/appleinternal/sbin/launchd.development"
+          chmod 755 "$MOUNT/usr/appleinternal/sbin/launchd.development"
           ls -l "$MOUNT/sbin/launchd"
           sync
           hdiutil detach "$MOUNT" -force || hdiutil detach /Volumes/d2xq -force
