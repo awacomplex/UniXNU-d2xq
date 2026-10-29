@@ -2,3 +2,4 @@
 # TODO(P1): 从 SM7325/SM8550 参考移植 SM8150 平台补丁后在此列出
 0001-bzero-no-dc-zva.patch
 0002-pmap-probe.patch
+0003-oskext-summary-realloc.patch
