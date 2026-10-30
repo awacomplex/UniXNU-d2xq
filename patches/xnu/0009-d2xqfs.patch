@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..d11d7d0 100644
+index 5b91579..eddba42 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,783 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,789 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -231,6 +231,12 @@ index 5b91579..d11d7d0 100644
 +d2xq_bar_stage(unsigned stage)
 +{
 +	d2xq_bar(stage, stage);
++}
++
++void *
++d2xq_vfstable(void)
++{
++	return (void *)d2xqfs_vfstable;
 +}
 +
 +int
@@ -811,10 +817,10 @@ index 5b91579..d11d7d0 100644
 +	d2xq_phase(stage, "bsd_init hook");
 +}
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
-index 57aece6..f8ff595 100644
+index 57aece6..e559047 100644
 --- a/bsd/vfs/vfs_subr.c
 +++ b/bsd/vfs/vfs_subr.c
-@@ -1206,9 +1206,53 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
+@@ -1206,9 +1206,55 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
   */
  extern int (*mountroot)(void);
  
@@ -826,29 +832,31 @@ index 57aece6..f8ff595 100644
 +static int
 +d2xq_root_mount(void)
 +{
++	extern void *d2xq_vfstable(void);
++	extern void d2xq_bar_stage(unsigned int);
 +	struct vfstable *vfsp;
 +	mount_t mp;
 +	vfs_context_t ctx = vfs_context_kernel();
 +	int error;
 +
-+	for (vfsp = vfsconf; vfsp; vfsp = vfsp->vfc_next) {
-+		if (strcmp(vfsp->vfc_name, "d2xqfs") == 0) {
-+			break;
-+		}
-+	}
++	vfsp = (struct vfstable *)d2xq_vfstable();
 +	if (vfsp == NULL) {
++		d2xq_bar_stage(12);     /* file system handle missing */
 +		return ENODEV;
 +	}
 +	mp = vfs_rootmountalloc_internal(vfsp, "d2xq");
 +	if (mp == NULL) {
++		d2xq_bar_stage(13);     /* cannot allocate the mount */
 +		return ENOMEM;
 +	}
 +	mp->mnt_flag |= MNT_ROOTFS;
 +	error = VFS_MOUNT(mp, NULLVP, 0, ctx);
 +	if (error) {
++		d2xq_bar_stage(14);     /* our VFS_MOUNT failed */
 +		vfs_rootmountfailed(mp);
 +		return error;
 +	}
++	d2xq_bar_stage(15);             /* mounted */
 +	vfs_unbusy(mp);
 +	mount_list_add(mp);
 +	(void)VFS_START(mp, 0, ctx);
