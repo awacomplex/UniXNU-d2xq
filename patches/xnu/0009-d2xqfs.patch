@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..8baa227 100644
+index 5b91579..d11d7d0 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,775 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,783 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -178,9 +178,11 @@ index 5b91579..8baa227 100644
 +static void
 +d2xq_bar(unsigned stage, unsigned color)
 +{
-+	static const unsigned colors[8] = {
++	static const unsigned colors[16] = {
 +		0x00FF0000u, 0x00FFFFFFu, 0x00FFFF00u, 0x0000FFFFu,
-+		0x00FF8000u, 0x008000FFu, 0x00808000u, 0x00808080u
++		0x00FF8000u, 0x008000FFu, 0x00808000u, 0x00808080u,
++		0x00800000u, 0x00008000u, 0x00000080u, 0x00808080u,
++		0x00FF00FFu, 0x0000FF80u, 0x0080FF00u, 0x00404040u
 +	};
 +	const vm_size_t stride = 5760;
 +	const unsigned height = 60;
@@ -205,7 +207,7 @@ index 5b91579..8baa227 100644
 +		return;
 +	}
 +	for (vm_size_t i = 0; i < height * stride / 4; i++) {
-+		((volatile unsigned *)va)[i] = colors[color & 7];
++		((volatile unsigned *)va)[i] = colors[color & 15];
 +	}
 +}
 +
@@ -225,6 +227,12 @@ index 5b91579..8baa227 100644
 +/* Used by the root-mount loop: when this boot argument is present only the
 + * synthetic file system may be considered, so a probing kext cannot stall the
 + * root mount on the placeholder ramdisk. */
++void
++d2xq_bar_stage(unsigned stage)
++{
++	d2xq_bar(stage, stage);
++}
++
 +int
 +d2xq_want_root(void)
 +{
@@ -803,25 +811,59 @@ index 5b91579..8baa227 100644
 +	d2xq_phase(stage, "bsd_init hook");
 +}
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
-index 57aece6..dfddda6 100644
+index 57aece6..b85bc6f 100644
 --- a/bsd/vfs/vfs_subr.c
 +++ b/bsd/vfs/vfs_subr.c
-@@ -1255,6 +1255,18 @@ vfs_mountroot(void)
- 			continue;
- 		}
+@@ -1207,8 +1207,52 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
+ extern int (*mountroot)(void);
  
-+		/* d2xq: the synthetic root is the only candidate while its boot
-+		 * argument is present; other file systems probe the placeholder
-+		 * ramdisk and can stall the mount. */
-+		{
-+			extern int d2xq_want_root(void);
+ int
++/*
++ * d2xq: mount the synthetic root file system without going through a block
++ * device. The board has no bdevsw for its memory media, so bdevvp() fails and
++ * the usual root mount never offers any file system the chance to mount.
++ */
++static int
++d2xq_root_mount(void)
++{
++	struct vfstable *vfsp;
++	mount_t mp;
++	vfs_context_t ctx = vfs_context_kernel();
++	int error;
 +
-+			if (d2xq_want_root() &&
-+			    strcmp(vfsp->vfc_name, "d2xqfs") != 0) {
-+				continue;
-+			}
++	for (vfsp = vfsconf; vfsp; vfsp = vfsp->vfc_next) {
++		if (strcmp(vfsp->vfc_name, "d2xqfs") == 0) {
++			break;
 +		}
++	}
++	if (vfsp == NULL) {
++		return ENODEV;
++	}
++	mp = vfs_rootmountalloc_internal(vfsp, "d2xq");
++	if (mp == NULL) {
++		return ENOMEM;
++	}
++	mp->mnt_flag |= MNT_ROOTFS;
++	error = VFS_MOUNT(mp, NULLVP, 0, ctx);
++	if (error) {
++		vfs_rootmountfailed(mp);
++		return error;
++	}
++	vfs_unbusy(mp);
++	mount_list_add(mp);
++	(void)VFS_START(mp, 0, ctx);
++	return 0;
++}
 +
- 		mp = vfs_rootmountalloc_internal(vfsp, "root_device");
- 		mp->mnt_devvp = rootvp;
- 
+ vfs_mountroot(void)
+ {
++	{
++		extern int d2xq_want_root(void);
++
++		if (d2xq_want_root()) {
++			return d2xq_root_mount();
++		}
++	}
+ #if CONFIG_MACF
+ 	struct vnode *vp;
+ #endif
