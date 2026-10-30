@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..afcb416 100644
+index 5b91579..f6e7560 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,758 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,765 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -182,17 +182,24 @@ index 5b91579..afcb416 100644
 +		0x00FF0000u, 0x00FFFFFFu, 0x00FFFF00u, 0x0000FFFFu,
 +		0x00FF8000u, 0x008000FFu, 0x00808000u, 0x00808080u
 +	};
++	const vm_size_t stride = 5760;
 +	const unsigned height = 60;
 +	unsigned y = 300 + stage * 72;
-+	vm_offset_t va = 0;
-+	vm_size_t stride = 5760;
-+	extern PE_state_t PE_state;
++	vm_offset_t va;
 +
-+	if (PE_state.video.v_baseAddr != 0 && PE_state.video.v_rowBytes != 0) {
-+		stride = (vm_size_t)PE_state.video.v_rowBytes;
-+		va = (vm_offset_t)PE_state.video.v_baseAddr + (vm_offset_t)y * stride;
-+	} else {
-+		va = ml_io_map(0x9C400000UL + (vm_offset_t)y * stride, height * stride);
++	/* The frame buffer is reported by physical address; ml_io_map() gives us
++	 * the kernel mapping for the band we paint. */
++	va = ml_io_map(0x9C400000UL + (vm_offset_t)y * stride, height * stride);
++	if (va == 0) {
++		/* Fall back to the kernel's video mapping, but only when it is a
++		 * kernel virtual address; early in boot it still holds the raw
++		 * physical base and writing through it would fault. */
++		extern PE_state_t PE_state;
++		vm_offset_t cand = (vm_offset_t)PE_state.video.v_baseAddr;
++
++		if (cand >= 0xFFFFFF0000000000ULL) {
++			va = cand + (vm_offset_t)y * stride;
++		}
 +	}
 +	if (va == 0) {
 +		return;
