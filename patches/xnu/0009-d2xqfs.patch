@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..08e7424 100644
+index 5b91579..de991ea 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,755 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,750 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -770,11 +770,6 @@ index 5b91579..08e7424 100644
 +	return makedev(d2xqfs_major, 0);
 +}
 +
-+void
-+d2xq_phase_bsd(int stage)
-+{
-+	d2xq_phase(stage, "bsd_init hook");
-+}
 +
 +void
 +d2xq_phase_bsd(int stage)
