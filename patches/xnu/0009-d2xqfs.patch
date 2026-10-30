@@ -1,8 +1,8 @@
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
-index 37017cf..08fd9f0 100644
+index 37017cf..9d67dff 100644
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
-@@ -1002,6 +1002,16 @@ bsd_init(void)
+@@ -1002,6 +1002,19 @@ bsd_init(void)
  
  		bsd_init_kprintf("calling setconf\n");
  		setconf();
@@ -11,19 +11,22 @@ index 37017cf..08fd9f0 100644
 +			extern dev_t d2xqfs_rootdev(void);
 +
 +			/* Synthetic root filesystem selected on the command line. */
-+			if (PE_parse_boot_argn("d2xqfs", NULL, 0) &&
-+			    d2xqfs_bootstrap() == 0) {
-+				rootdev = d2xqfs_rootdev();
++			if (PE_parse_boot_argn("d2xqfs", NULL, 0)) {
++				extern void d2xq_phase_bsd(int);
++				d2xq_phase_bsd(0);
++				if (d2xqfs_bootstrap() == 0) {
++					rootdev = d2xqfs_rootdev();
++				}
 +			}
 +		}
  #if CONFIG_NETBOOT
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..9d7ec96 100644
+index 5b91579..179555d 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,676 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,704 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -161,6 +164,23 @@ index 5b91579..9d7ec96 100644
 +static int d2xqfs_registered;
 +static int d2xqfs_mount_data;
 +
++
++/* d2xq: staged panic probes selected with the d2xq_test=<n> boot argument.
++ * The kernel console is not visible on this board, so a panic screen is the
++ * only dependable channel for bring-up state. */
++void d2xq_phase_bsd(int stage);
++
++static void
++d2xq_phase(int stage, const char *what)
++{
++	int requested = 0;
++
++	if (PE_parse_boot_argn("d2xq_test", &requested, sizeof (requested)) &&
++	    requested == stage) {
++		panic("D2XQ test %d: %s", stage, what);
++	}
++}
++
 +/* ------------------------------------------------------------------ */
 +/* vnode operations                                                    */
 +/* ------------------------------------------------------------------ */
@@ -253,6 +273,7 @@ index 5b91579..9d7ec96 100644
 +		break;
 +	case D2XQFS_SBIN:
 +		if (len == 7 && bcmp(name, "launchd", 7) == 0) {
++			d2xq_phase(4, "lookup launchd");
 +			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_INIT, vpp);
 +		}
 +		break;
@@ -421,6 +442,7 @@ index 5b91579..9d7ec96 100644
 +d2xqfs_pagein(struct vnop_pagein_args *ap)
 +{
 +	int ino = (int)(uintptr_t)vnode_fsnode(ap->a_vp);
++	d2xq_phase(5, "pagein");
 +	upl_t upl = ap->a_pl;
 +	upl_page_info_t *plinfo = NULL;
 +	vm_offset_t dst = 0;
@@ -522,6 +544,7 @@ index 5b91579..9d7ec96 100644
 +static int
 +d2xqfs_mount(struct mount *mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 +{
++	d2xq_phase(2, "d2xqfs_mount entered");
 +	vfs_getnewfsid(mp);
 +	vfs_setfsprivate(mp, &d2xqfs_mount_data);
 +	mp->mnt_flag |= MNT_LOCAL | MNT_RDONLY | MNT_DONTBROWSE;
@@ -546,6 +569,7 @@ index 5b91579..9d7ec96 100644
 +static int
 +d2xqfs_root(struct mount *mp, vnode_t *vpp, vfs_context_t ctx)
 +{
++	d2xq_phase(3, "d2xqfs_root entered");
 +	return d2xqfs_create_vnode(mp, D2XQFS_ROOT, vpp);
 +}
 +
@@ -689,6 +713,7 @@ index 5b91579..9d7ec96 100644
 +	}
 +	d2xqfs_registered = 1;
 +	printf("d2xqfs: registered, block major %d\n", d2xqfs_major);
++	d2xq_phase(1, "bootstrap registered");
 +	return 0;
 +}
 +
@@ -699,4 +724,10 @@ index 5b91579..9d7ec96 100644
 +		return NODEV;
 +	}
 +	return makedev(d2xqfs_major, 0);
++}
++
++void
++d2xq_phase_bsd(int stage)
++{
++	d2xq_phase(stage, "bsd_init hook");
 +}
