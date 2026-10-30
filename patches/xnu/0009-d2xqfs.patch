@@ -34,10 +34,10 @@ index 37017cf..8e55b83 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..16a9621 100644
+index 5b91579..afcb416 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,756 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,758 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -190,8 +190,8 @@ index 5b91579..16a9621 100644
 +d2xq_bar(unsigned stage, unsigned color)
 +{
 +	static const unsigned colors[8] = {
-+		0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00FF00FFu,
-+		0x00FFFF00u, 0x0000FFFFu, 0x00FFFFFFu, 0x00808080u
++		0x00FF0000u, 0x00FFFFFFu, 0x00FFFF00u, 0x0000FFFFu,
++		0x00FF8000u, 0x008000FFu, 0x00808000u, 0x00808080u
 +	};
 +	const unsigned height = 60;
 +	unsigned y = 300 + stage * 72;
@@ -763,11 +763,13 @@ index 5b91579..16a9621 100644
 +	}
 +	d2xqfs_major = bdevsw_add(-1, &d2xqfs_bdevsw);
 +	if (d2xqfs_major < 0) {
++		d2xq_mark(6, 6);
 +		printf("d2xqfs: bdevsw_add failed: %d\n", d2xqfs_major);
 +		return ENXIO;
 +	}
 +	error = vfs_fsadd(&d2xqfs_fsentry, &d2xqfs_vfstable);
 +	if (error) {
++		d2xq_mark(7, 7);
 +		printf("d2xqfs: vfs_fsadd failed: %d\n", error);
 +		return error;
 +	}
