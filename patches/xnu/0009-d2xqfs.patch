@@ -817,10 +817,10 @@ index 5b91579..eddba42 100644
 +	d2xq_phase(stage, "bsd_init hook");
 +}
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
-index 57aece6..e559047 100644
+index 57aece6..58f7cd6 100644
 --- a/bsd/vfs/vfs_subr.c
 +++ b/bsd/vfs/vfs_subr.c
-@@ -1206,9 +1206,55 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
+@@ -1206,9 +1206,51 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
   */
  extern int (*mountroot)(void);
  
@@ -841,22 +841,18 @@ index 57aece6..e559047 100644
 +
 +	vfsp = (struct vfstable *)d2xq_vfstable();
 +	if (vfsp == NULL) {
-+		d2xq_bar_stage(12);     /* file system handle missing */
-+		return ENODEV;
++		panic("D2XQ: no file system handle");
 +	}
 +	mp = vfs_rootmountalloc_internal(vfsp, "d2xq");
 +	if (mp == NULL) {
-+		d2xq_bar_stage(13);     /* cannot allocate the mount */
-+		return ENOMEM;
++		panic("D2XQ: root mount allocation returned NULL, vfsp=%p", vfsp);
 +	}
 +	mp->mnt_flag |= MNT_ROOTFS;
 +	error = VFS_MOUNT(mp, NULLVP, 0, ctx);
 +	if (error) {
-+		d2xq_bar_stage(14);     /* our VFS_MOUNT failed */
-+		vfs_rootmountfailed(mp);
-+		return error;
++		panic("D2XQ: VFS_MOUNT returned %d, mp=%p", error, mp);
 +	}
-+	d2xq_bar_stage(15);             /* mounted */
++	d2xq_bar_stage(15);
 +	vfs_unbusy(mp);
 +	mount_list_add(mp);
 +	(void)VFS_START(mp, 0, ctx);
