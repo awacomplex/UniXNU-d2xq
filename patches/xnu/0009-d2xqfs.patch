@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..f6e7560 100644
+index 5b91579..8baa227 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,765 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,775 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -221,6 +221,16 @@ index 5b91579..f6e7560 100644
 +}
 +
 +void d2xq_phase_bsd(int stage);
++
++/* Used by the root-mount loop: when this boot argument is present only the
++ * synthetic file system may be considered, so a probing kext cannot stall the
++ * root mount on the placeholder ramdisk. */
++int
++d2xq_want_root(void)
++{
++	return PE_parse_boot_argn("d2xqfs", NULL, 0) ? 1 : 0;
++}
++
 +
 +static void
 +d2xq_phase(int stage, const char *what)
@@ -792,3 +802,26 @@ index 5b91579..f6e7560 100644
 +	d2xq_mark(0, 0);
 +	d2xq_phase(stage, "bsd_init hook");
 +}
+diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
+index 57aece6..dfddda6 100644
+--- a/bsd/vfs/vfs_subr.c
++++ b/bsd/vfs/vfs_subr.c
+@@ -1255,6 +1255,18 @@ vfs_mountroot(void)
+ 			continue;
+ 		}
+ 
++		/* d2xq: the synthetic root is the only candidate while its boot
++		 * argument is present; other file systems probe the placeholder
++		 * ramdisk and can stall the mount. */
++		{
++			extern int d2xq_want_root(void);
++
++			if (d2xq_want_root() &&
++			    strcmp(vfsp->vfc_name, "d2xqfs") != 0) {
++				continue;
++			}
++		}
++
+ 		mp = vfs_rootmountalloc_internal(vfsp, "root_device");
+ 		mp->mnt_devvp = rootvp;
+ 
