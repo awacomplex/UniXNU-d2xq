@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..179555d 100644
+index 5b91579..08e7424 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,704 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,755 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -168,6 +168,45 @@ index 5b91579..179555d 100644
 +/* d2xq: staged panic probes selected with the d2xq_test=<n> boot argument.
 + * The kernel console is not visible on this board, so a panic screen is the
 + * only dependable channel for bring-up state. */
++
++/* d2xq: draw a solid band directly into the frame buffer. The kernel console is
++ * not visible on this board and the panic screen needs video state that does
++ * not exist yet this early, so the bands are the reliable bring-up channel.
++ * The panel is 1440x3040 at 32 bpp with a 5760-byte row stride. */
++extern vm_offset_t ml_io_map(vm_offset_t phys, vm_size_t size);
++
++static void
++d2xq_bar(unsigned stage, unsigned color)
++{
++	static const unsigned colors[8] = {
++		0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00FF00FFu,
++		0x00FFFF00u, 0x0000FFFFu, 0x00FFFFFFu, 0x00808080u
++	};
++	const vm_size_t stride = 5760;
++	const unsigned height = 60;
++	unsigned y = 300 + stage * 72;
++	vm_offset_t va;
++
++	va = ml_io_map(0x9C400000UL + (vm_offset_t)y * stride, height * stride);
++	if (va == 0) {
++		return;
++	}
++	for (vm_size_t i = 0; i < height * stride / 4; i++) {
++		((volatile unsigned *)va)[i] = colors[color & 7];
++	}
++}
++
++static void
++d2xq_mark(unsigned stage, unsigned color)
++{
++	int requested = 0;
++
++	if (PE_parse_boot_argn("d2xq_bars", &requested, sizeof (requested)) == 0) {
++		return;
++	}
++	d2xq_bar(stage, color);
++}
++
 +void d2xq_phase_bsd(int stage);
 +
 +static void
@@ -274,6 +313,7 @@ index 5b91579..179555d 100644
 +	case D2XQFS_SBIN:
 +		if (len == 7 && bcmp(name, "launchd", 7) == 0) {
 +			d2xq_phase(4, "lookup launchd");
++			d2xq_mark(4, 4);
 +			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_INIT, vpp);
 +		}
 +		break;
@@ -443,6 +483,7 @@ index 5b91579..179555d 100644
 +{
 +	int ino = (int)(uintptr_t)vnode_fsnode(ap->a_vp);
 +	d2xq_phase(5, "pagein");
++	d2xq_mark(5, 5);
 +	upl_t upl = ap->a_pl;
 +	upl_page_info_t *plinfo = NULL;
 +	vm_offset_t dst = 0;
@@ -545,6 +586,7 @@ index 5b91579..179555d 100644
 +d2xqfs_mount(struct mount *mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 +{
 +	d2xq_phase(2, "d2xqfs_mount entered");
++	d2xq_mark(2, 2);
 +	vfs_getnewfsid(mp);
 +	vfs_setfsprivate(mp, &d2xqfs_mount_data);
 +	mp->mnt_flag |= MNT_LOCAL | MNT_RDONLY | MNT_DONTBROWSE;
@@ -570,6 +612,7 @@ index 5b91579..179555d 100644
 +d2xqfs_root(struct mount *mp, vnode_t *vpp, vfs_context_t ctx)
 +{
 +	d2xq_phase(3, "d2xqfs_root entered");
++	d2xq_mark(3, 3);
 +	return d2xqfs_create_vnode(mp, D2XQFS_ROOT, vpp);
 +}
 +
@@ -714,6 +757,7 @@ index 5b91579..179555d 100644
 +	d2xqfs_registered = 1;
 +	printf("d2xqfs: registered, block major %d\n", d2xqfs_major);
 +	d2xq_phase(1, "bootstrap registered");
++	d2xq_mark(1, 1);
 +	return 0;
 +}
 +
@@ -729,5 +773,12 @@ index 5b91579..179555d 100644
 +void
 +d2xq_phase_bsd(int stage)
 +{
++	d2xq_phase(stage, "bsd_init hook");
++}
++
++void
++d2xq_phase_bsd(int stage)
++{
++	d2xq_mark(0, 0);
 +	d2xq_phase(stage, "bsd_init hook");
 +}
