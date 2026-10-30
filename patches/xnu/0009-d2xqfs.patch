@@ -23,10 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..eddba42 100644
+index 5b91579..9759005 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,789 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -715,7 +715,8 @@ index 5b91579..eddba42 100644
 +	.vfe_opvdescs = d2xqfs_vnodeop_descs,
 +	.vfe_fstypenum = 0,
 +	.vfe_fsname = D2XQFS_FSNAME,
-+	.vfe_flags = VFS_TBLCANMOUNTROOT | VFS_TBLVNOP_PAGEINV2 | VFS_TBLTHREADSAFE,
++	.vfe_flags = VFS_TBLCANMOUNTROOT | VFS_TBLVNOP_PAGEINV2 | VFS_TBLTHREADSAFE |
++	    VFS_TBL64BITREADY,
 +};
 +
 +/* ------------------------------------------------------------------ */
