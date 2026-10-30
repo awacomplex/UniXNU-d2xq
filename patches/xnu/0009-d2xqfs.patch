@@ -1,19 +1,8 @@
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
-index 37017cf..8e55b83 100644
+index 37017cf..9d67dff 100644
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
-@@ -566,6 +566,10 @@ native_mobile_graphics_load_probe(void)
- void
- bsd_init(void)
- {
-+	{
-+		extern void d2xq_phase_bsd(int);
-+		d2xq_phase_bsd(9);
-+	}
- 	struct uthread *ut;
- 	vnode_t init_rootvnode = NULLVP;
- 	struct proc_ro_data kernproc_ro_data = {
-@@ -1002,6 +1006,19 @@ bsd_init(void)
+@@ -1002,6 +1002,19 @@ bsd_init(void)
  
  		bsd_init_kprintf("calling setconf\n");
  		setconf();
