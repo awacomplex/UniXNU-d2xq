@@ -1,8 +1,19 @@
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
-index 37017cf..9d67dff 100644
+index 37017cf..8e55b83 100644
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
-@@ -1002,6 +1002,19 @@ bsd_init(void)
+@@ -566,6 +566,10 @@ native_mobile_graphics_load_probe(void)
+ void
+ bsd_init(void)
+ {
++	{
++		extern void d2xq_phase_bsd(int);
++		d2xq_phase_bsd(9);
++	}
+ 	struct uthread *ut;
+ 	vnode_t init_rootvnode = NULLVP;
+ 	struct proc_ro_data kernproc_ro_data = {
+@@ -1002,6 +1006,19 @@ bsd_init(void)
  
  		bsd_init_kprintf("calling setconf\n");
  		setconf();
@@ -23,10 +34,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..de991ea 100644
+index 5b91579..16a9621 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,750 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,756 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -182,12 +193,18 @@ index 5b91579..de991ea 100644
 +		0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00FF00FFu,
 +		0x00FFFF00u, 0x0000FFFFu, 0x00FFFFFFu, 0x00808080u
 +	};
-+	const vm_size_t stride = 5760;
 +	const unsigned height = 60;
 +	unsigned y = 300 + stage * 72;
-+	vm_offset_t va;
++	vm_offset_t va = 0;
++	vm_size_t stride = 5760;
++	extern PE_state_t PE_state;
 +
-+	va = ml_io_map(0x9C400000UL + (vm_offset_t)y * stride, height * stride);
++	if (PE_state.video.v_baseAddr != 0 && PE_state.video.v_rowBytes != 0) {
++		stride = (vm_size_t)PE_state.video.v_rowBytes;
++		va = (vm_offset_t)PE_state.video.v_baseAddr + (vm_offset_t)y * stride;
++	} else {
++		va = ml_io_map(0x9C400000UL + (vm_offset_t)y * stride, height * stride);
++	}
 +	if (va == 0) {
 +		return;
 +	}
