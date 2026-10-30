@@ -20,10 +20,10 @@ index 37017cf..08fd9f0 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..32c2c0d 100644
+index 5b91579..9d7ec96 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8956,3 +8956,678 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8956,676 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -177,28 +177,30 @@ index 5b91579..32c2c0d 100644
 +static int d2xqfs_pathconf(struct vnop_pathconf_args *);
 +static int d2xqfs_getxattr(struct vnop_getxattr_args *);
 +static int d2xqfs_pagein(struct vnop_pagein_args *);
++/* Declared in sys/ubc.h only for XNU_KERNEL_PRIVATE consumers. */
++extern int ubc_create_upl(vnode_t, off_t, int, upl_t *, upl_page_info_t **, int);
 +static int d2xqfs_pageout(struct vnop_pageout_args *);
 +static int d2xqfs_blockmap(struct vnop_blockmap_args *);
 +
 +static int (**d2xqfs_vnodeop_p)(void *);
 +
 +static struct vnodeopv_entry_desc d2xqfs_vnodeop_entries[] = {
-+	{ &vnop_default_desc, (VOPFUNC)vn_default_error },
-+	{ &vnop_lookup_desc, (VOPFUNC)d2xqfs_lookup },
-+	{ &vnop_getattr_desc, (VOPFUNC)d2xqfs_getattr_vn },
-+	{ &vnop_read_desc, (VOPFUNC)d2xqfs_read },
-+	{ &vnop_write_desc, (VOPFUNC)d2xqfs_write },
-+	{ &vnop_open_desc, (VOPFUNC)d2xqfs_open },
-+	{ &vnop_close_desc, (VOPFUNC)d2xqfs_close },
-+	{ &vnop_inactive_desc, (VOPFUNC)d2xqfs_inactive },
-+	{ &vnop_reclaim_desc, (VOPFUNC)d2xqfs_reclaim },
-+	{ &vnop_access_desc, (VOPFUNC)d2xqfs_access },
-+	{ &vnop_pathconf_desc, (VOPFUNC)d2xqfs_pathconf },
-+	{ &vnop_getxattr_desc, (VOPFUNC)d2xqfs_getxattr },
-+	{ &vnop_pagein_desc, (VOPFUNC)d2xqfs_pagein },
-+	{ &vnop_pageout_desc, (VOPFUNC)d2xqfs_pageout },
-+	{ &vnop_blockmap_desc, (VOPFUNC)d2xqfs_blockmap },
-+	{ NULL, (VOPFUNC)NULL }
++	{ &vnop_default_desc, (int (*)(void *))vn_default_error },
++	{ &vnop_lookup_desc, (int (*)(void *))d2xqfs_lookup },
++	{ &vnop_getattr_desc, (int (*)(void *))d2xqfs_getattr_vn },
++	{ &vnop_read_desc, (int (*)(void *))d2xqfs_read },
++	{ &vnop_write_desc, (int (*)(void *))d2xqfs_write },
++	{ &vnop_open_desc, (int (*)(void *))d2xqfs_open },
++	{ &vnop_close_desc, (int (*)(void *))d2xqfs_close },
++	{ &vnop_inactive_desc, (int (*)(void *))d2xqfs_inactive },
++	{ &vnop_reclaim_desc, (int (*)(void *))d2xqfs_reclaim },
++	{ &vnop_access_desc, (int (*)(void *))d2xqfs_access },
++	{ &vnop_pathconf_desc, (int (*)(void *))d2xqfs_pathconf },
++	{ &vnop_getxattr_desc, (int (*)(void *))d2xqfs_getxattr },
++	{ &vnop_pagein_desc, (int (*)(void *))d2xqfs_pagein },
++	{ &vnop_pageout_desc, (int (*)(void *))d2xqfs_pageout },
++	{ &vnop_blockmap_desc, (int (*)(void *))d2xqfs_blockmap },
++	{ NULL, (int (*)(void *))NULL }
 +};
 +
 +static struct vnodeopv_desc d2xqfs_vnodeop_desc = {
@@ -308,10 +310,6 @@ index 5b91579..32c2c0d 100644
 +	if (VATTR_IS_ACTIVE(vap, va_data_size)) {
 +		vap->va_data_size = (ino == D2XQFS_INIT) ? D2XQFS_IMAGE_SIZE : 0;
 +		VATTR_SET_SUPPORTED(vap, va_data_size);
-+	}
-+	if (VATTR_IS_ACTIVE(vap, va_blocksize)) {
-+		vap->va_blocksize = 4096;
-+		VATTR_SET_SUPPORTED(vap, va_blocksize);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_rdev)) {
 +		vap->va_rdev = (ino == D2XQFS_CONSOLE) ? makedev(0, 0) : 0;
@@ -635,7 +633,7 @@ index 5b91579..32c2c0d 100644
 +static void
 +d2xqfs_bd_strategy(struct buf *bp)
 +{
-+	buf_error(bp) = EIO;
++	buf_seterror(bp, EIO);
 +	buf_biodone(bp);
 +}
 +
