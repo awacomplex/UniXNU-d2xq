@@ -811,13 +811,13 @@ index 5b91579..d11d7d0 100644
 +	d2xq_phase(stage, "bsd_init hook");
 +}
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
-index 57aece6..b85bc6f 100644
+index 57aece6..f8ff595 100644
 --- a/bsd/vfs/vfs_subr.c
 +++ b/bsd/vfs/vfs_subr.c
-@@ -1207,8 +1207,52 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
+@@ -1206,9 +1206,53 @@ vfs_rootmountalloc(const char *fstypename, const char *devname, mount_t *mpp)
+  */
  extern int (*mountroot)(void);
  
- int
 +/*
 + * d2xq: mount the synthetic root file system without going through a block
 + * device. The board has no bdevsw for its memory media, so bdevvp() fails and
@@ -855,6 +855,7 @@ index 57aece6..b85bc6f 100644
 +	return 0;
 +}
 +
+ int
  vfs_mountroot(void)
  {
 +	{
