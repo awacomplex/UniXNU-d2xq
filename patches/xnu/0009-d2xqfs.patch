@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..2c18f1c 100644
+index 5b91579..ac5a141 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1704,18 +1704,25 @@ grade:
@@ -81,18 +81,18 @@ index 5b91579..2c18f1c 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -7897,6 +7907,11 @@ done:
- static int
- load_init_program_at_path(proc_t p, user_addr_t scratch_addr, const char* path, user_addr_t envp)
- {
+@@ -7901,6 +7911,11 @@ load_init_program_at_path(proc_t p, user_addr_t scratch_addr, const char* path,
+ 	int error;
+ 	struct execve_args init_exec_args;
+ 	user_addr_t argv0 = USER_ADDR_NULL, argv1 = USER_ADDR_NULL;
 +	{
 +		extern void d2xq_phase(int, const char *);
 +
 +		d2xq_phase(14, "load_init_program");
 +	}
- 	int retval[2];
- 	int error;
- 	struct execve_args init_exec_args;
+ 
+ 	/*
+ 	 * Validate inputs and pre-conditions
 @@ -8956,3 +8971,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
