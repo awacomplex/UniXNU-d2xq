@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..e7c172e 100644
+index 5b91579..f602062 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1189,6 +1189,11 @@ SYSCTL_PROC(_vm, OID_AUTO, shared_region_control,
@@ -38,7 +38,7 @@ index 5b91579..e7c172e 100644
  	struct mach_header *mach_header = (struct mach_header *)imgp->ip_vdata;
  	proc_t                  p = vfs_context_proc(imgp->ip_vfs_context);
  	int                     error = 0;
-@@ -1700,10 +1705,15 @@ grade:
+@@ -1700,22 +1705,13 @@ grade:
  		psignal(p, SIGTRAP);
  	}
  
@@ -46,19 +46,27 @@ index 5b91579..e7c172e 100644
 -	    create_unix_stack(get_task_map(task),
 -	    &load_result,
 -	    p) != KERN_SUCCESS) {
+-		error = load_return_to_errno(LOAD_NOSPACE);
+-
+-		KERNEL_DEBUG_CONSTANT(BSDDBG_CODE(DBG_BSD_PROC, BSD_PROC_EXITREASON_CREATE) | DBG_FUNC_NONE,
+-		    proc_getpid(p), OS_REASON_EXEC, EXEC_EXIT_REASON_STACK_ALLOC, 0, 0);
 +	if (load_result.unixproc) {
 +		int d2xq_kr = create_unix_stack(get_task_map(task),
 +		    &load_result, p);
-+
+ 
+-		exec_failure_reason = os_reason_create(OS_REASON_EXEC, EXEC_EXIT_REASON_STACK_ALLOC);
+-		if (bootarg_execfailurereports) {
+-			set_proc_name(imgp, p);
+-			exec_failure_reason->osr_flags |= OS_REASON_FLAG_GENERATE_CRASH_REPORT;
 +		if (d2xq_kr != KERN_SUCCESS) {
 +			panic("D2XQ stack failed kr=%d", d2xq_kr);
-+		}
-+	}
-+	if (0) {
- 		error = load_return_to_errno(LOAD_NOSPACE);
+ 		}
+-
+-		goto badtoolate;
+ 	}
  
- 		KERNEL_DEBUG_CONSTANT(BSDDBG_CODE(DBG_BSD_PROC, BSD_PROC_EXITREASON_CREATE) | DBG_FUNC_NONE,
-@@ -8956,3 +8966,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+ 	if (load_result.hardened_runtime_binary) {
+@@ -8956,3 +8952,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
