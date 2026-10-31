@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..916b5e5 100644
+index 5b91579..ad33711 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1704,18 +1704,25 @@ grade:
@@ -64,7 +64,16 @@ index 5b91579..916b5e5 100644
  	}
  
  	if (load_result.hardened_runtime_binary) {
-@@ -2130,6 +2137,7 @@ cleanup_rosetta_fp:
+@@ -1829,6 +1836,8 @@ grade:
+ 		}
+ 		/* Set the stack */
+ 		thread_setuserstack(thread, ap);
++		panic("D2XQ exec ok entry=%llx stack=%llx",
++		    (uint64_t)load_result.entry_point, (uint64_t)load_result.user_stack);
+ 	}
+ 
+ 	if (load_result.dynlinker || load_result.is_rosetta) {
+@@ -2130,6 +2139,7 @@ cleanup_rosetta_fp:
  	goto done;
  
  badtoolate:
@@ -72,7 +81,7 @@ index 5b91579..916b5e5 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -8956,3 +8964,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8966,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
