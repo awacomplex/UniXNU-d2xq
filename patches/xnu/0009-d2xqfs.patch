@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..ac5a141 100644
+index 5b91579..422956f 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1704,18 +1704,25 @@ grade:
@@ -2958,7 +2958,7 @@ index 5b91579..ac5a141 100644
 +}
 +
 +
-+static void
++void
 +d2xq_phase(int stage, const char *what)
 +{
 +	int requested = 0;
