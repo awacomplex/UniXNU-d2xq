@@ -1119,32 +1119,6 @@ index 5b91579..2f9d4ef 100644
 +	d2xq_mark(0, 0);
 +	d2xq_phase(stage, "bsd_init hook");
 +}
-diff --git a/bsd/kern/kern_sig.c b/bsd/kern/kern_sig.c
-index 6f93e15..f513ce2 100644
---- a/bsd/kern/kern_sig.c
-+++ b/bsd/kern/kern_sig.c
-@@ -2066,20 +2066,7 @@ psignal_internal(proc_t p, task_t task, thread_t thread, int flavor, int signum,
- 	}
- #endif /* SIGNAL_DEBUG */
- 
--	/* catch unexpected initproc kills early for easier debuggging */
--	if (signum == SIGKILL && p == initproc) {
--		if (signal_reason == NULL) {
--			panic_plain("unexpected SIGKILL of %s %s (no reason provided)",
--			    (p->p_name[0] != '\0' ? p->p_name : "initproc"),
--			    ((proc_getcsflags(p) & CS_KILLED) ? "(CS_KILLED)" : ""));
--		} else {
--			launchd_exit_reason_desc = exit_reason_get_string_desc(signal_reason);
--			panic_plain("unexpected SIGKILL of %s %s with reason -- namespace %d code 0x%llx description %." LAUNCHD_PANIC_REASON_STRING_MAXLEN "s",
--			    (p->p_name[0] != '\0' ? p->p_name : "initproc"),
--			    ((proc_getcsflags(p) & CS_KILLED) ? "(CS_KILLED)" : ""),
--			    signal_reason->osr_namespace, signal_reason->osr_code,
--			    launchd_exit_reason_desc ? launchd_exit_reason_desc : "none");
--		}
-+	/* d2xq: init SIGKILL during reboot is expected; no debug panic */
- 	}
- 
- 	/*
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
 index 57aece6..58f7cd6 100644
 --- a/bsd/vfs/vfs_subr.c
