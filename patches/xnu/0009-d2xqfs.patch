@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..69c7a3f 100644
+index 5b91579..0ef85f9 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -126,7 +126,31 @@ index 5b91579..69c7a3f 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -8956,3 +8979,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -5268,6 +5291,11 @@ __mac_execve(proc_t p, struct __mac_execve_args *uap, int32_t *retval __unused)
+ 	 */
+ 	error = exec_activate_image(imgp);
+ 	/* thread and task ref returned for vfexec case */
++	{
++		extern void d2xq_bar_stage(unsigned int);
++
++		d2xq_bar_stage(5);
++	}
+ 
+ 	if (imgp->ip_new_thread != NULL) {
+ 		/*
+@@ -5486,6 +5514,11 @@ exit_with_error:
+ 		ipc_importance_release(inherit);
+ 	}
+ 
++	{
++		extern void d2xq_bar_stage(unsigned int);
++
++		d2xq_bar_stage(2);
++	}
+ 	return error;
+ }
+ 
+@@ -8956,3 +8989,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
