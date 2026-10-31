@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..c586930 100644
+index 5b91579..e7c172e 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1189,6 +1189,11 @@ SYSCTL_PROC(_vm, OID_AUTO, shared_region_control,
@@ -33,25 +33,32 @@ index 5b91579..c586930 100644
 +	{
 +		extern void d2xq_phase(int, const char *);
 +
-+		d2xq_phase(9, "exec_mach_imgact entry");
++		d2xq_phase(9, "exec entry");
 +	}
  	struct mach_header *mach_header = (struct mach_header *)imgp->ip_vdata;
  	proc_t                  p = vfs_context_proc(imgp->ip_vfs_context);
  	int                     error = 0;
-@@ -1700,8 +1705,11 @@ grade:
+@@ -1700,10 +1705,15 @@ grade:
  		psignal(p, SIGTRAP);
  	}
  
-+	{
-+		extern int d2xq_stack_check(vm_map_t, load_result_t *, proc_t);
-+	}
- 	if (load_result.unixproc &&
+-	if (load_result.unixproc &&
 -	    create_unix_stack(get_task_map(task),
-+	    d2xq_stack_check(get_task_map(task),
- 	    &load_result,
- 	    p) != KERN_SUCCESS) {
+-	    &load_result,
+-	    p) != KERN_SUCCESS) {
++	if (load_result.unixproc) {
++		int d2xq_kr = create_unix_stack(get_task_map(task),
++		    &load_result, p);
++
++		if (d2xq_kr != KERN_SUCCESS) {
++			panic("D2XQ stack failed kr=%d", d2xq_kr);
++		}
++	}
++	if (0) {
  		error = load_return_to_errno(LOAD_NOSPACE);
-@@ -8956,3 +8964,803 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+ 
+ 		KERNEL_DEBUG_CONSTANT(BSDDBG_CODE(DBG_BSD_PROC, BSD_PROC_EXITREASON_CREATE) | DBG_FUNC_NONE,
+@@ -8956,3 +8966,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -841,19 +848,6 @@ index 5b91579..c586930 100644
 +{
 +	d2xq_mark(0, 0);
 +	d2xq_phase(stage, "bsd_init hook");
-+}
-+
-+int
-+d2xq_stack_check(vm_map_t map, load_result_t *result, proc_t p)
-+{
-+	int kr = create_unix_stack(map, result, p);
-+
-+	if (kr != KERN_SUCCESS) {
-+		panic("D2XQ stack kr=%d alloc=0x%llx stack=0x%llx unixproc=%d",
-+		    kr, (uint64_t)result->user_stack_alloc_size,
-+		    (uint64_t)result->user_stack, (int)result->unixproc);
-+	}
-+	return kr;
 +}
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
 index 57aece6..58f7cd6 100644
