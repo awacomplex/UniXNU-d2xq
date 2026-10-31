@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..44a6b9b 100644
+index 5b91579..d730efa 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -150,7 +150,7 @@ index 5b91579..44a6b9b 100644
  	return error;
  }
  
-@@ -8956,3 +8989,3438 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8989,3445 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -3289,9 +3289,6 @@ index 5b91579..44a6b9b 100644
 +{
 +	int ino = (int)(uintptr_t)vnode_fsnode(ap->a_vp);
 +	d2xq_phase(5, "pagein");
-+	panic("D2XQ pagein size=%d ploff=%d foff=%lld upl=%p",
-+	    (int)ap->a_size, (int)ap->a_pl_offset,
-+	    (long long)ap->a_f_offset, ap->a_pl);
 +	d2xq_mark(5, 5);
 +	upl_t upl = ap->a_pl;
 +	upl_page_info_t *plinfo = NULL;
@@ -3302,7 +3299,11 @@ index 5b91579..44a6b9b 100644
 +	boolean_t created = FALSE;
 +
 +	if (upl == NULL) {
-+		error = ubc_create_upl(ap->a_vp, ap->a_f_offset, (int)ap->a_size,
++		/* The caller wants the range placed at a_pl_offset inside the
++		 * UPL, so the UPL must cover a_pl_offset + a_size. */
++		size_t total = (size_t)ap->a_pl_offset + (size_t)ap->a_size;
++
++		error = ubc_create_upl(ap->a_vp, ap->a_f_offset, (int)total,
 +		    &upl, &plinfo, UPL_UBC_PAGEIN | UPL_RET_ONLY_ABSENT);
 +		if (error) {
 +			return error;
@@ -3312,10 +3313,16 @@ index 5b91579..44a6b9b 100644
 +	error = ubc_upl_map(upl, &dst);
 +	if (error) {
 +		if (created) {
-+			ubc_upl_abort_range(upl, ap->a_pl_offset, (upl_size_t)ap->a_size,
++			ubc_upl_abort_range(upl, 0,
++			    (upl_size_t)(ap->a_pl_offset + ap->a_size),
 +			    UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 +		}
 +		return error;
++	}
++	if (created) {
++		size_t total = (size_t)ap->a_pl_offset + (size_t)ap->a_size;
++
++		bzero((caddr_t)dst, total);
 +	}
 +	bzero((caddr_t)(dst + ap->a_pl_offset), size);
 +	if (ino == D2XQFS_INIT && off < D2XQFS_IMAGE_SIZE) {
