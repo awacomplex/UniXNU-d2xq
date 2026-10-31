@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..da146d3 100644
+index 5b91579..7be2b95 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1704,18 +1704,25 @@ grade:
@@ -64,16 +64,7 @@ index 5b91579..da146d3 100644
  	}
  
  	if (load_result.hardened_runtime_binary) {
-@@ -1829,6 +1836,8 @@ grade:
- 		}
- 		/* Set the stack */
- 		thread_setuserstack(thread, ap);
-+		panic("D2XQ exec ok entry=%llx stack=%llx",
-+		    (uint64_t)load_result.entry_point, (uint64_t)load_result.user_stack);
- 	}
- 
- 	if (load_result.dynlinker || load_result.is_rosetta) {
-@@ -2130,6 +2139,7 @@ cleanup_rosetta_fp:
+@@ -2130,6 +2137,7 @@ cleanup_rosetta_fp:
  	goto done;
  
  badtoolate:
@@ -81,7 +72,7 @@ index 5b91579..da146d3 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -8120,6 +8130,9 @@ load_init_program(proc_t p)
+@@ -8120,6 +8128,9 @@ load_init_program(proc_t p)
  static int
  load_return_to_errno(load_return_t lrtn)
  {
@@ -91,7 +82,7 @@ index 5b91579..da146d3 100644
  	switch (lrtn) {
  	case LOAD_SUCCESS:
  		return 0;
-@@ -8956,3 +8969,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8967,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -137,7 +128,7 @@ index 5b91579..da146d3 100644
 +static const unsigned char d2xqfs_image[] = {
 +	0xCF, 0xFA, 0xED, 0xFE, 0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
 +	0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x88, 0x02, 0x00, 0x00,
-+	0x85, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x00,
++	0x81, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x00,
 +	0x48, 0x00, 0x00, 0x00, 0x5F, 0x5F, 0x50, 0x41, 0x47, 0x45, 0x5A, 0x45,
 +	0x52, 0x4F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 +	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
