@@ -23,7 +23,7 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..72ca232 100644
+index 5b91579..6e3cc62 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1704,18 +1704,25 @@ grade:
@@ -64,7 +64,15 @@ index 5b91579..72ca232 100644
  	}
  
  	if (load_result.hardened_runtime_binary) {
-@@ -8956,3 +8963,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -2130,6 +2137,7 @@ cleanup_rosetta_fp:
+ 	goto done;
+ 
+ badtoolate:
++	panic("D2XQ exec failed error=%d", error);
+ 	/* Don't allow child process to execute any instructions */
+ 	if (!spawn) {
+ 		{
+@@ -8956,3 +8964,790 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
