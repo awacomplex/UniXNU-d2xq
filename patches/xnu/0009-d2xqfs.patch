@@ -3529,6 +3529,62 @@ index 5b91579..422956f 100644
 +	d2xq_mark(0, 0);
 +	d2xq_phase(stage, "bsd_init hook");
 +}
+diff --git a/bsd/kern/mach_loader.c b/bsd/kern/mach_loader.c
+index 665536f..3168f1a 100644
+--- a/bsd/kern/mach_loader.c
++++ b/bsd/kern/mach_loader.c
+@@ -683,6 +683,7 @@ load_machfile(
+ 		kret = task_start_halt(task);
+ 		if (kret != KERN_SUCCESS) {
+ 			vm_map_deallocate(map); /* will lose pmap reference too */
++		panic("D2XQ machfail load_machfile #1 line 686");
+ 			return LOAD_FAILURE;
+ 		}
+ 		proc_transcommit(p, 0);
+@@ -831,6 +832,7 @@ parse_machfile(
+ 	 *	Break infinite recursion
+ 	 */
+ 	if (depth > 2) {
++		panic("D2XQ machfail parse_machfile #1 line 834");
+ 		return LOAD_FAILURE;
+ 	}
+ 
+@@ -863,11 +865,13 @@ parse_machfile(
+ 	switch (header->filetype) {
+ 	case MH_EXECUTE:
+ 		if (depth != 1 && depth != 3) {
++		panic("D2XQ machfail parse_machfile #2 line 866");
+ 			return LOAD_FAILURE;
+ 		}
+ 		if (header->flags & MH_DYLDLINK) {
+ 			/* Check properties of dynamic executables */
+ 			if (!(header->flags & MH_PIE) && pie_required(header->cputype, header->cpusubtype & ~CPU_SUBTYPE_MASK)) {
++		panic("D2XQ machfail parse_machfile #3 line 871");
+ 				return LOAD_FAILURE;
+ 			}
+ 			result->needs_dynlinker = TRUE;
+@@ -880,18 +884,21 @@ parse_machfile(
+ 		} else {
+ 			/* Check properties of static executables (disallowed except for development) */
+ #if !(DEVELOPMENT || DEBUG)
++		panic("D2XQ machfail parse_machfile #4 line 883");
+ 			return LOAD_FAILURE;
+ #endif
+ 		}
+ 		break;
+ 	case MH_DYLINKER:
+ 		if (depth != 2) {
++		panic("D2XQ machfail parse_machfile #5 line 889");
+ 			return LOAD_FAILURE;
+ 		}
+ 		is_dyld = TRUE;
+ 		break;
+ 
+ 	default:
++		panic("D2XQ machfail parse_machfile #6 line 895");
+ 		return LOAD_FAILURE;
+ 	}
+ 
 diff --git a/bsd/vfs/vfs_subr.c b/bsd/vfs/vfs_subr.c
 index 57aece6..58f7cd6 100644
 --- a/bsd/vfs/vfs_subr.c
