@@ -23,22 +23,10 @@ index 37017cf..9d67dff 100644
  		netboot = (mountroot == netboot_mountroot);
  #endif
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..04a09fc 100644
+index 5b91579..2c18f1c 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -1189,6 +1189,11 @@ SYSCTL_PROC(_vm, OID_AUTO, shared_region_control,
- static int
- exec_mach_imgact(struct image_params *imgp)
- {
-+	{
-+		extern void d2xq_phase(int, const char *);
-+
-+		d2xq_phase(13, "exec_mach_imgact");
-+	}
- 	struct mach_header *mach_header = (struct mach_header *)imgp->ip_vdata;
- 	proc_t                  p = vfs_context_proc(imgp->ip_vfs_context);
- 	int                     error = 0;
-@@ -1704,18 +1709,25 @@ grade:
+@@ -1704,18 +1704,25 @@ grade:
  	    create_unix_stack(get_task_map(task),
  	    &load_result,
  	    p) != KERN_SUCCESS) {
@@ -76,7 +64,16 @@ index 5b91579..04a09fc 100644
  	}
  
  	if (load_result.hardened_runtime_binary) {
-@@ -2130,6 +2142,7 @@ cleanup_rosetta_fp:
+@@ -1829,6 +1836,8 @@ grade:
+ 		}
+ 		/* Set the stack */
+ 		thread_setuserstack(thread, ap);
++		panic("D2XQ exec ok entry=%llx stack=%llx",
++		    (uint64_t)load_result.entry_point, (uint64_t)load_result.user_stack);
+ 	}
+ 
+ 	if (load_result.dynlinker || load_result.is_rosetta) {
+@@ -2130,6 +2139,7 @@ cleanup_rosetta_fp:
  	goto done;
  
  badtoolate:
@@ -84,31 +81,7 @@ index 5b91579..04a09fc 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -2217,6 +2230,11 @@ struct execsw {
- static int
- exec_activate_image(struct image_params *imgp)
- {
-+	{
-+		extern void d2xq_phase(int, const char *);
-+
-+		d2xq_phase(12, "exec_activate_image");
-+	}
- 	struct nameidata *ndp = NULL;
- 	const char *excpath;
- 	int error;
-@@ -5130,6 +5148,11 @@ proc_exec_switch_task(proc_t old_proc, proc_t new_proc, task_t old_task, task_t
- int
- execve(proc_t p, struct execve_args *uap, int32_t *retval)
- {
-+	{
-+		extern void d2xq_phase(int, const char *);
-+
-+		d2xq_phase(11, "execve");
-+	}
- 	struct __mac_execve_args muap;
- 	int err;
- 
-@@ -7897,6 +7920,11 @@ done:
+@@ -7897,6 +7907,11 @@ done:
  static int
  load_init_program_at_path(proc_t p, user_addr_t scratch_addr, const char* path, user_addr_t envp)
  {
@@ -120,7 +93,7 @@ index 5b91579..04a09fc 100644
  	int retval[2];
  	int error;
  	struct execve_args init_exec_args;
-@@ -8956,3 +8984,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8971,3435 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
