@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..d730efa 100644
+index 5b91579..b5ad1e4 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -150,7 +150,7 @@ index 5b91579..d730efa 100644
  	return error;
  }
  
-@@ -8956,3 +8989,3445 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8989,3634 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -192,6 +192,12 @@ index 5b91579..d730efa 100644
 +#define D2XQFS_CONSOLE  3
 +#define D2XQFS_SBIN     4
 +#define D2XQFS_INIT     5
++#define D2XQFS_ETC      6
++#define D2XQFS_MOTD     7
++#define D2XQFS_NULLDEV  8
++#define D2XQFS_ZERODEV  9
++
++static const char d2xqfs_motd_text[] = "d2xqfs motd\n";
 +
 +static const unsigned char d2xqfs_image[] = {
 +	0xCF, 0xFA, 0xED, 0xFE, 0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
@@ -3040,6 +3046,7 @@ index 5b91579..d730efa 100644
 +static int d2xqfs_reclaim(struct vnop_reclaim_args *);
 +static int d2xqfs_access(struct vnop_access_args *);
 +static int d2xqfs_pathconf(struct vnop_pathconf_args *);
++static int d2xqfs_readdir(struct vnop_readdir_args *);
 +static int d2xqfs_getxattr(struct vnop_getxattr_args *);
 +static int d2xqfs_pagein(struct vnop_pagein_args *);
 +/* Declared in sys/ubc.h only for XNU_KERNEL_PRIVATE consumers. */
@@ -3061,6 +3068,7 @@ index 5b91579..d730efa 100644
 +	{ &vnop_reclaim_desc, (int (*)(void *))d2xqfs_reclaim },
 +	{ &vnop_access_desc, (int (*)(void *))d2xqfs_access },
 +	{ &vnop_pathconf_desc, (int (*)(void *))d2xqfs_pathconf },
++	{ &vnop_readdir_desc, (int (*)(void *))d2xqfs_readdir },
 +	{ &vnop_getxattr_desc, (int (*)(void *))d2xqfs_getxattr },
 +	{ &vnop_pagein_desc, (int (*)(void *))d2xqfs_pagein },
 +	{ &vnop_pageout_desc, (int (*)(void *))d2xqfs_pageout },
@@ -3077,6 +3085,127 @@ index 5b91579..d730efa 100644
 +};
 +
 +static int d2xqfs_create_vnode(mount_t, int, vnode_t *);
++
++struct d2xqfs_dirent_def {
++	const char *name;
++	int ino;
++	int type;
++};
++
++static const struct d2xqfs_dirent_def d2xqfs_root_entries[] = {
++	{ "sbin", D2XQFS_SBIN, DT_DIR },
++	{ "dev", D2XQFS_DEV, DT_DIR },
++	{ "etc", D2XQFS_ETC, DT_DIR },
++	{ NULL, 0, 0 }
++};
++
++static const struct d2xqfs_dirent_def d2xqfs_sbin_entries[] = {
++	{ "launchd", D2XQFS_INIT, DT_REG },
++	{ NULL, 0, 0 }
++};
++
++static const struct d2xqfs_dirent_def d2xqfs_dev_entries[] = {
++	{ "console", D2XQFS_CONSOLE, DT_CHR },
++	{ "null", D2XQFS_NULLDEV, DT_CHR },
++	{ "zero", D2XQFS_ZERODEV, DT_CHR },
++	{ NULL, 0, 0 }
++};
++
++static const struct d2xqfs_dirent_def d2xqfs_etc_entries[] = {
++	{ "motd", D2XQFS_MOTD, DT_REG },
++	{ NULL, 0, 0 }
++};
++
++static int
++d2xqfs_readdir(struct vnop_readdir_args *ap)
++{
++	struct vnode *vp = ap->a_vp;
++	struct uio *uio = ap->a_uio;
++	struct dirent dirent;
++	const struct d2xqfs_dirent_def *ents = NULL;
++	off_t pos = 0;
++	off_t startpos = uio_offset(uio);
++	int ino = (int)(uintptr_t)vnode_fsnode(vp);
++	int error = 0;
++	int idx;
++
++	if (ap->a_flags & (VNODE_READDIR_EXTENDED | VNODE_READDIR_REQSEEKOFF)) {
++		return EINVAL;
++	}
++	if (vnode_vtype(vp) != VDIR) {
++		return ENOTDIR;
++	}
++	switch (ino) {
++	case D2XQFS_ROOT:
++		ents = d2xqfs_root_entries;
++		break;
++	case D2XQFS_SBIN:
++		ents = d2xqfs_sbin_entries;
++		break;
++	case D2XQFS_DEV:
++		ents = d2xqfs_dev_entries;
++		break;
++	case D2XQFS_ETC:
++		ents = d2xqfs_etc_entries;
++		break;
++	default:
++		return ENOTDIR;
++	}
++
++	for (idx = 0; ; idx++) {
++		const char *name;
++		int child;
++		int type;
++		int reclen;
++
++		if (idx == 0) {
++			name = ".";
++			child = ino;
++			type = DT_DIR;
++		} else if (idx == 1) {
++			name = "..";
++			child = D2XQFS_ROOT;
++			type = DT_DIR;
++		} else {
++			const struct d2xqfs_dirent_def *e = &ents[idx - 2];
++
++			if (e->name == NULL) {
++				break;
++			}
++			name = e->name;
++			child = e->ino;
++			type = e->type;
++		}
++
++		bzero(&dirent, sizeof (dirent));
++		dirent.d_fileno = child;
++		dirent.d_namlen = (__uint8_t)strlen(name);
++		dirent.d_type = (__uint8_t)type;
++		reclen = (int)((sizeof (struct dirent) - (MAXNAMLEN + 1)) +
++		    (((dirent.d_namlen + 1 + 3) & ~3)));
++		dirent.d_reclen = (__uint16_t)reclen;
++
++		if (pos >= startpos) {
++			if ((int)uio_resid(uio) < reclen) {
++				break;
++			}
++			strlcpy(dirent.d_name, name, sizeof (dirent.d_name));
++			if ((error = uiomove((caddr_t)&dirent, reclen, uio)) != 0) {
++				break;
++			}
++		}
++		pos += reclen;
++	}
++
++	uio->uio_offset = pos;
++	if (ap->a_eofflag != NULL) {
++		*ap->a_eofflag = 0;
++	}
++	if (ap->a_numdirent != NULL) {
++		*ap->a_numdirent = 0;
++	}
++	return error;
++}
 +
 +static int
 +d2xqfs_lookup(struct vnop_lookup_args *ap)
@@ -3099,7 +3228,7 @@ index 5b91579..d730efa 100644
 +	}
 +	if (len == 2 && name[0] == '.' && name[1] == '.') {
 +		int parent = (ino == D2XQFS_ROOT) ? D2XQFS_ROOT :
-+		    (ino == D2XQFS_SBIN || ino == D2XQFS_DEV) ? D2XQFS_ROOT : D2XQFS_ROOT;
++		    (ino == D2XQFS_SBIN || ino == D2XQFS_DEV || ino == D2XQFS_ETC) ? D2XQFS_ROOT : D2XQFS_ROOT;
 +		return d2xqfs_create_vnode(vnode_mount(dvp), parent, vpp);
 +	}
 +
@@ -3109,6 +3238,9 @@ index 5b91579..d730efa 100644
 +
 +	switch (ino) {
 +	case D2XQFS_ROOT:
++		if (len == 3 && bcmp(name, "etc", 3) == 0) {
++			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_ETC, vpp);
++		}
 +		if (len == 4 && bcmp(name, "sbin", 4) == 0) {
 +			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_SBIN, vpp);
 +		}
@@ -3123,9 +3255,20 @@ index 5b91579..d730efa 100644
 +			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_INIT, vpp);
 +		}
 +		break;
++	case D2XQFS_ETC:
++		if (len == 4 && bcmp(name, "motd", 4) == 0) {
++			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_MOTD, vpp);
++		}
++		break;
 +	case D2XQFS_DEV:
 +		if (len == 7 && bcmp(name, "console", 7) == 0) {
 +			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_CONSOLE, vpp);
++		}
++		if (len == 4 && bcmp(name, "null", 4) == 0) {
++			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_NULLDEV, vpp);
++		}
++		if (len == 4 && bcmp(name, "zero", 4) == 0) {
++			return d2xqfs_create_vnode(vnode_mount(dvp), D2XQFS_ZERODEV, vpp);
 +		}
 +		break;
 +	default:
@@ -3150,7 +3293,8 @@ index 5b91579..d730efa 100644
 +		VATTR_SET_SUPPORTED(vap, va_type);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_mode)) {
-+		vap->va_mode = (ino == D2XQFS_CONSOLE) ? (S_IFCHR | 0666) :
++		vap->va_mode = (ino == D2XQFS_CONSOLE || ino == D2XQFS_NULLDEV ||
++		    ino == D2XQFS_ZERODEV) ? (S_IFCHR | 0666) :
 +		    (vnode_vtype(vp) == VDIR) ? (S_IFDIR | 0555) : (S_IFREG | 0555);
 +		VATTR_SET_SUPPORTED(vap, va_mode);
 +	}
@@ -3175,7 +3319,8 @@ index 5b91579..d730efa 100644
 +		VATTR_SET_SUPPORTED(vap, va_fsid);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_data_size)) {
-+		vap->va_data_size = (ino == D2XQFS_INIT) ? D2XQFS_IMAGE_SIZE : 0;
++		vap->va_data_size = (ino == D2XQFS_INIT) ? D2XQFS_IMAGE_SIZE :
++		    (ino == D2XQFS_MOTD) ? (off_t)(sizeof (d2xqfs_motd_text) - 1) : 0;
 +		VATTR_SET_SUPPORTED(vap, va_data_size);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_rdev)) {
@@ -3217,6 +3362,26 @@ index 5b91579..d730efa 100644
 +	off_t off = uio_offset(uio);
 +	int resid = (int)uio_resid(uio);
 +
++	if (ino == D2XQFS_MOTD) {
++		size_t len = sizeof (d2xqfs_motd_text) - 1;
++
++		if (off >= (off_t)len) {
++			return 0;
++		}
++		if ((size_t)resid > len - (size_t)off) {
++			resid = (int)(len - (size_t)off);
++		}
++		return uiomove((caddr_t)(uintptr_t)&d2xqfs_motd_text[off], resid, uio);
++	}
++	if (ino == D2XQFS_CONSOLE || ino == D2XQFS_NULLDEV) {
++		return 0;
++	}
++	if (ino == D2XQFS_ZERODEV) {
++		static const char zeroes[512];
++		int n = resid > (int)sizeof (zeroes) ? (int)sizeof (zeroes) : resid;
++
++		return uiomove((caddr_t)(uintptr_t)zeroes, n, uio);
++	}
 +	if (ino != D2XQFS_INIT) {
 +		return EISDIR;
 +	}
@@ -3232,9 +3397,16 @@ index 5b91579..d730efa 100644
 +static int
 +d2xqfs_write(struct vnop_write_args *ap)
 +{
-+	/* Accept and discard writes (console diagnostics). */
-+	if ((int)(uintptr_t)vnode_fsnode(ap->a_vp) == D2XQFS_CONSOLE) {
-+		return 0;
++	int wino = (int)(uintptr_t)vnode_fsnode(ap->a_vp);
++
++	if (wino == D2XQFS_CONSOLE || wino == D2XQFS_NULLDEV ||
++	    wino == D2XQFS_ZERODEV) {
++		char scratch[64];
++		int resid = (int)uio_resid(ap->a_uio);
++		int n = resid > (int)sizeof (scratch) ? (int)sizeof (scratch) : resid;
++
++		/* 消费用户数据（丢弃），write(2) 因此返回实际字节数。 */
++		return uiomove(scratch, n, ap->a_uio);
 +	}
 +	return EROFS;
 +}
@@ -3331,6 +3503,14 @@ index 5b91579..d730efa 100644
 +			n = (size_t)(D2XQFS_IMAGE_SIZE - off);
 +		}
 +		bcopy(&d2xqfs_image[off], (caddr_t)(dst + ap->a_pl_offset), n);
++	} else if (ino == D2XQFS_MOTD &&
++	    off < (off_t)(sizeof (d2xqfs_motd_text) - 1)) {
++		size_t len = sizeof (d2xqfs_motd_text) - 1;
++		size_t n = size;
++		if ((size_t)n > len - (size_t)off) {
++			n = len - (size_t)off;
++		}
++		bcopy(&d2xqfs_motd_text[off], (caddr_t)(dst + ap->a_pl_offset), n);
 +	}
 +	ubc_upl_unmap(upl);
 +	if (created) {
@@ -3368,9 +3548,16 @@ index 5b91579..d730efa 100644
 +	case D2XQFS_ROOT:
 +	case D2XQFS_SBIN:
 +	case D2XQFS_DEV:
++	case D2XQFS_ETC:
 +		type = VDIR;
 +		break;
++	case D2XQFS_MOTD:
++		type = VREG;
++		size = (off_t)(sizeof (d2xqfs_motd_text) - 1);
++		break;
 +	case D2XQFS_CONSOLE:
++	case D2XQFS_NULLDEV:
++	case D2XQFS_ZERODEV:
 +		type = VCHR;
 +		break;
 +	default:
@@ -3387,7 +3574,9 @@ index 5b91579..d730efa 100644
 +	vfsp.vnfs_vops = d2xqfs_vnodeop_p;
 +	vfsp.vnfs_markroot = (ino == D2XQFS_ROOT);
 +	vfsp.vnfs_marksystem = 1;
-+	vfsp.vnfs_rdev = (ino == D2XQFS_CONSOLE) ? makedev(0, 0) : 0;
++	vfsp.vnfs_rdev = (ino == D2XQFS_CONSOLE) ? makedev(0, 0) :
++	    (ino == D2XQFS_NULLDEV) ? makedev(0, 1) :
++	    (ino == D2XQFS_ZERODEV) ? makedev(0, 2) : 0;
 +	vfsp.vnfs_filesize = size;
 +	vfsp.vnfs_flags = VNFS_NOCACHE | VNFS_CANTCACHE;
 +
@@ -3405,7 +3594,7 @@ index 5b91579..d730efa 100644
 +	d2xq_mark(2, 2);
 +	vfs_getnewfsid(mp);
 +	vfs_setfsprivate(mp, &d2xqfs_mount_data);
-+	mp->mnt_flag |= MNT_LOCAL | MNT_RDONLY | MNT_DONTBROWSE;
++	mp->mnt_flag |= MNT_LOCAL | MNT_DONTBROWSE;
 +	(void)devvp;
 +	(void)data;
 +	(void)ctx;

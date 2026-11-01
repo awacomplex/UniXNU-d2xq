@@ -125,3 +125,16 @@
         // 驱动侧确认：CONFIG_TOUCHSCREEN_SEC_TS_Y771_D=y（d2xq_chn_open_defconfig）
     };
 };
+
+// ---- UFS：native-ufs-root 实验用（驱动仅在 boot-arg 存在时访问硬件）----
+// ADT 验证：本地 dtc + make-adt.py 生成 /device-tree/arm-io/ufshc，
+// reg 经 arm-io ranges 还原为 0x1d84000/0x2500、0x1d87000/0xe00。
+&ufshc_mem {
+    compatible = "qcom,sm8150-ufshc";
+    unixnu,adt-name = "ufshc";
+    reg = <0x0 0x1d84000 0x0 0x2500>,
+          <0x0 0x1d87000 0x0 0xe00>;
+    interrupts = <0 265 0>;
+    interrupt-parent = <&intc>;
+    status = "okay";
+};
