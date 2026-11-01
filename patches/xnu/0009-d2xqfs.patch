@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..90a08e0 100644
+index 5b91579..8024cba 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -3102,7 +3102,7 @@ index 5b91579..90a08e0 100644
 +		d2xq_console_x += 4u * cell;
 +		return;
 +	}
-+	if (c < 32 || c > 127) {
++	if ((unsigned char)c < 32 || (unsigned char)c > 126) {
 +		return;
 +	}
 +	if (d2xq_console_x + cell > D2XQ_CONSOLE_WIDTH) {
