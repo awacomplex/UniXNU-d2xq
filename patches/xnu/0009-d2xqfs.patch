@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..2578dcb 100644
+index 5b91579..d45dfd2 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -150,7 +150,7 @@ index 5b91579..2578dcb 100644
  	return error;
  }
  
-@@ -8956,3 +8989,3686 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8989,3808 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -3033,6 +3033,115 @@ index 5b91579..2578dcb 100644
 +}
 +
 +/* ------------------------------------------------------------------ */
++/* console output: draw userland writes on the frame buffer            */
++/* ------------------------------------------------------------------ */
++
++#define D2XQ_CONSOLE_SCALE  3u
++#define D2XQ_CONSOLE_STRIDE 5760u
++#define D2XQ_CONSOLE_WIDTH  1440u
++#define D2XQ_CONSOLE_HEIGHT 3040u
++#define D2XQ_CONSOLE_X0     64u
++#define D2XQ_CONSOLE_Y0     1500u
++
++static const unsigned long long d2xq_font[96] = {
++	0x0000000000000000, 0x0842108000020084, 0x0005294000000000, 0x15F528000000295F,
++	0x1C52F88000023E94, 0x088556400004D542, 0x04528800000B2725, 0x0002108000000000,
++	0x0421108800821042, 0x1084108200221108, 0x0957548000000000, 0x3E42000000000084,
++	0x0000000000223000, 0x3E00000000000000, 0x0000000000471000, 0x0884420000008442,
++	0x2318A88000022A31, 0x08429880000F9084, 0x1108C5C0000F8444, 0x1C4443E000074610,
++	0x14A62100000423E9, 0x26D087E000074610, 0x1E10C5C000074631, 0x088443E000010844,
++	0x1D18C5C000074631, 0x3D18C5C000074610, 0x08E2000000471000, 0x08E2000000223000,
++	0x0222220000082082, 0x01F00000000003E0, 0x2082082000008888, 0x1108C5C000020084,
++	0x2B98C5C0000F05B5, 0x2318A8800008C63F, 0x1D2949E00007CA52, 0x0210C5C000074421,
++	0x252949E00007CA52, 0x1E1087E0000F8421, 0x1E1087E000008421, 0x0210C5C000074639,
++	0x3F18C6200008C631, 0x084211C000071084, 0x1084238000032508, 0x0654C6200008C525,
++	0x02108420000F8421, 0x2B5DC6200008C631, 0x2B59CE200008C739, 0x2318C5C000074631,
++	0x1F18C5E000008421, 0x2318C5C001075631, 0x1F18C5E00008C525, 0x1C10C5C000074610,
++	0x084213E000021084, 0x2318C62000074631, 0x1518C6200002114A, 0x2B18C620000556B5,
++	0x08A546200008C54A, 0x08A5462000021084, 0x088443E0000F8442, 0x0421084E00E10842,
++	0x0821042000084108, 0x1084210E00E42108, 0x0008A88000000000, 0x0000000001F00000,
++	0x0000010400000000, 0x20E00000000B663E, 0x22F084200007C631, 0x22E0000000074421,
++	0x23E84200000F4631, 0x22E000000007443F, 0x1E21498000010842, 0x22E000001D187A31,
++	0x26D084200008C631, 0x0860100000071084, 0x10C020000C94A108, 0x0A9084200008A4A3,
++	0x084210C000071084, 0x2AB000000008D6B5, 0x26D000000008C631, 0x22E0000000074631,
++	0x22F000000210BE31, 0x23E0000021087A31, 0x26D0000000008421, 0x22E0000000074506,
++	0x04F1080000064842, 0x23100000000B6631, 0x2310000000022951, 0x23100000000556B5,
++	0x151000000008A884, 0x231000001D185B31, 0x11F00000000F8444, 0x0642109801821084,
++	0x0842108000021084, 0x3042108300321084, 0x0004D64000000000, 0x0000000000000000,
++};
++
++static unsigned d2xq_console_x;
++static unsigned d2xq_console_y;
++static int d2xq_console_ready;
++
++static void
++d2xq_console_putc(char c)
++{
++	const unsigned cell = 5u * D2XQ_CONSOLE_SCALE;
++	const unsigned line = 12u * D2XQ_CONSOLE_SCALE;
++	unsigned long long glyph;
++	unsigned top;
++	unsigned bottom;
++	unsigned row;
++	unsigned col;
++	unsigned dy;
++	unsigned dx;
++	vm_offset_t va;
++
++	if (!d2xq_console_ready) {
++		d2xq_console_x = D2XQ_CONSOLE_X0;
++		d2xq_console_y = D2XQ_CONSOLE_Y0;
++		d2xq_console_ready = 1;
++	}
++	if (c == '\n') {
++		d2xq_console_x = D2XQ_CONSOLE_X0;
++		d2xq_console_y += line;
++		return;
++	}
++	if (c == '\t') {
++		d2xq_console_x += 4u * cell;
++		return;
++	}
++	if (c < 32 || c > 127) {
++		return;
++	}
++	if (d2xq_console_x + cell > D2XQ_CONSOLE_WIDTH) {
++		d2xq_console_x = D2XQ_CONSOLE_X0;
++		d2xq_console_y += line;
++	}
++	if (d2xq_console_y + line > D2XQ_CONSOLE_HEIGHT) {
++		return; /* no scrolling: drop output below the screen */
++	}
++	va = ml_io_map(0x9C400000UL + (vm_offset_t)d2xq_console_y * D2XQ_CONSOLE_STRIDE,
++	    line * D2XQ_CONSOLE_STRIDE);
++	if (va == 0) {
++		return;
++	}
++	glyph = d2xq_font[(unsigned char)c - 32];
++	top = (unsigned)(glyph >> 32);
++	bottom = (unsigned)glyph;
++	for (row = 0; row < 12; row++) {
++		unsigned data = (row < 6) ? (top >> (row * 5)) : (bottom >> ((row - 6) * 5));
++
++		for (col = 0; col < 5; col++) {
++			if (((data >> col) & 1u) == 0) {
++				continue;
++			}
++			for (dy = 0; dy < D2XQ_CONSOLE_SCALE; dy++) {
++				for (dx = 0; dx < D2XQ_CONSOLE_SCALE; dx++) {
++					((volatile unsigned *)va)[((row * D2XQ_CONSOLE_SCALE + dy) *
++					    D2XQ_CONSOLE_STRIDE +
++					    (d2xq_console_x + col * D2XQ_CONSOLE_SCALE + dx) * 4) / 4] =
++					    0x00FFFFFFu;
++				}
++			}
++		}
++	}
++	d2xq_console_x += cell;
++}
++
++
++/* ------------------------------------------------------------------ */
 +/* vnode operations                                                    */
 +/* ------------------------------------------------------------------ */
 +
@@ -3402,11 +3511,24 @@ index 5b91579..2578dcb 100644
 +	if (wino == D2XQFS_CONSOLE || wino == D2XQFS_NULLDEV ||
 +	    wino == D2XQFS_ZERODEV) {
 +		char scratch[64];
-+		int resid = (int)uio_resid(ap->a_uio);
-+		int n = resid > (int)sizeof (scratch) ? (int)sizeof (scratch) : resid;
++		int error = 0;
 +
-+		/* 消费用户数据（丢弃），write(2) 因此返回实际字节数。 */
-+		return uiomove(scratch, n, ap->a_uio);
++		while (uio_resid(ap->a_uio) > 0) {
++			int resid = (int)uio_resid(ap->a_uio);
++			int n = resid > (int)sizeof (scratch) ? (int)sizeof (scratch) : resid;
++			int i;
++
++			error = uiomove(scratch, n, ap->a_uio);
++			if (error != 0) {
++				break;
++			}
++			if (wino == D2XQFS_CONSOLE) {
++				for (i = 0; i < n; i++) {
++					d2xq_console_putc(scratch[i]);
++				}
++			}
++		}
++		return error;
 +	}
 +	return EROFS;
 +}
