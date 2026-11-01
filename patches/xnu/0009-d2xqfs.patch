@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..f120939 100644
+index 5b91579..aff8ea8 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -155,7 +155,7 @@ index 5b91579..f120939 100644
  	return error;
  }
  
-@@ -8956,3 +8993,3836 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8993,3894 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
@@ -203,6 +203,27 @@ index 5b91579..f120939 100644
 +#define D2XQFS_ZERODEV  9
 +
 +static const char d2xqfs_motd_text[] = "d2xqfs motd\n";
++
++#define D2XQFS_MOTD_MAX 256
++static char d2xqfs_motd_buf[D2XQFS_MOTD_MAX];
++static unsigned d2xqfs_motd_len;
++static int d2xqfs_motd_ready;
++
++static void
++d2xqfs_motd_init(void)
++{
++	size_t n = sizeof (d2xqfs_motd_text) - 1;
++
++	if (d2xqfs_motd_ready) {
++		return;
++	}
++	if (n > D2XQFS_MOTD_MAX) {
++		n = D2XQFS_MOTD_MAX;
++	}
++	bcopy(d2xqfs_motd_text, d2xqfs_motd_buf, n);
++	d2xqfs_motd_len = (unsigned)n;
++	d2xqfs_motd_ready = 1;
++}
 +
 +static const unsigned char d2xqfs_image[] = {
 +	0xCF, 0xFA, 0xED, 0xFE, 0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
@@ -3437,7 +3458,7 @@ index 5b91579..f120939 100644
 +	if (VATTR_IS_ACTIVE(vap, va_mode)) {
 +		vap->va_mode = (ino == D2XQFS_CONSOLE || ino == D2XQFS_NULLDEV ||
 +		    ino == D2XQFS_ZERODEV) ? (S_IFCHR | 0666) :
-+		    (vnode_vtype(vp) == VDIR) ? (S_IFDIR | 0555) : (S_IFREG | 0555);
++		    (vnode_vtype(vp) == VDIR) ? (S_IFDIR | 0555) : (S_IFREG | 0644);
 +		VATTR_SET_SUPPORTED(vap, va_mode);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_nlink)) {
@@ -3461,8 +3482,11 @@ index 5b91579..f120939 100644
 +		VATTR_SET_SUPPORTED(vap, va_fsid);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_data_size)) {
++		if (ino == D2XQFS_MOTD) {
++			d2xqfs_motd_init();
++		}
 +		vap->va_data_size = (ino == D2XQFS_INIT) ? D2XQFS_IMAGE_SIZE :
-+		    (ino == D2XQFS_MOTD) ? (off_t)(sizeof (d2xqfs_motd_text) - 1) : 0;
++		    (ino == D2XQFS_MOTD) ? (off_t)d2xqfs_motd_len : 0;
 +		VATTR_SET_SUPPORTED(vap, va_data_size);
 +	}
 +	if (VATTR_IS_ACTIVE(vap, va_rdev)) {
@@ -3505,15 +3529,17 @@ index 5b91579..f120939 100644
 +	int resid = (int)uio_resid(uio);
 +
 +	if (ino == D2XQFS_MOTD) {
-+		size_t len = sizeof (d2xqfs_motd_text) - 1;
++		size_t len;
 +
++		d2xqfs_motd_init();
++		len = (size_t)d2xqfs_motd_len;
 +		if (off >= (off_t)len) {
 +			return 0;
 +		}
 +		if ((size_t)resid > len - (size_t)off) {
 +			resid = (int)(len - (size_t)off);
 +		}
-+		return uiomove((caddr_t)(uintptr_t)&d2xqfs_motd_text[off], resid, uio);
++		return uiomove((caddr_t)(uintptr_t)&d2xqfs_motd_buf[off], resid, uio);
 +	}
 +	if (ino == D2XQFS_CONSOLE || ino == D2XQFS_NULLDEV) {
 +		return 0;
@@ -3537,9 +3563,41 @@ index 5b91579..f120939 100644
 +}
 +
 +static int
++static int
 +d2xqfs_write(struct vnop_write_args *ap)
 +{
 +	int wino = (int)(uintptr_t)vnode_fsnode(ap->a_vp);
++
++	if (wino == D2XQFS_MOTD) {
++		off_t off = uio_offset(ap->a_uio);
++
++		d2xqfs_motd_init();
++		if (off < 0) {
++			return EINVAL;
++		}
++		if ((unsigned)off >= D2XQFS_MOTD_MAX) {
++			return ENOSPC;
++		}
++		while (uio_resid(ap->a_uio) > 0) {
++			int resid = (int)uio_resid(ap->a_uio);
++			int space = (int)(D2XQFS_MOTD_MAX - (unsigned)off);
++			int n = resid > space ? space : resid;
++			int error;
++
++			if (n <= 0) {
++				return ENOSPC;
++			}
++			error = uiomove(&d2xqfs_motd_buf[off], n, ap->a_uio);
++			if (error != 0) {
++				return error;
++			}
++			off += n;
++			if ((unsigned)off > d2xqfs_motd_len) {
++				d2xqfs_motd_len = (unsigned)off;
++			}
++		}
++		return 0;
++	}
 +
 +	if (wino == D2XQFS_CONSOLE || wino == D2XQFS_NULLDEV ||
 +	    wino == D2XQFS_ZERODEV) {
@@ -3565,7 +3623,6 @@ index 5b91579..f120939 100644
 +	}
 +	return EROFS;
 +}
-+
 +static int
 +d2xqfs_open(struct vnop_open_args *ap)
 +{
@@ -3659,13 +3716,13 @@ index 5b91579..f120939 100644
 +		}
 +		bcopy(&d2xqfs_image[off], (caddr_t)(dst + ap->a_pl_offset), n);
 +	} else if (ino == D2XQFS_MOTD &&
-+	    off < (off_t)(sizeof (d2xqfs_motd_text) - 1)) {
-+		size_t len = sizeof (d2xqfs_motd_text) - 1;
++	    off < (off_t)d2xqfs_motd_len) {
++		size_t len = (size_t)d2xqfs_motd_len;
 +		size_t n = size;
 +		if ((size_t)n > len - (size_t)off) {
 +			n = len - (size_t)off;
 +		}
-+		bcopy(&d2xqfs_motd_text[off], (caddr_t)(dst + ap->a_pl_offset), n);
++		bcopy(&d2xqfs_motd_buf[off], (caddr_t)(dst + ap->a_pl_offset), n);
 +	}
 +	ubc_upl_unmap(upl);
 +	if (created) {
@@ -3708,7 +3765,8 @@ index 5b91579..f120939 100644
 +		break;
 +	case D2XQFS_MOTD:
 +		type = VREG;
-+		size = (off_t)(sizeof (d2xqfs_motd_text) - 1);
++		d2xqfs_motd_init();
++		size = (off_t)d2xqfs_motd_len;
 +		break;
 +	case D2XQFS_CONSOLE:
 +	case D2XQFS_NULLDEV:
