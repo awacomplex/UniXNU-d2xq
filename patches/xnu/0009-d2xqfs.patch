@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..d45dfd2 100644
+index 5b91579..6d0117b 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -3036,11 +3036,11 @@ index 5b91579..d45dfd2 100644
 +/* console output: draw userland writes on the frame buffer            */
 +/* ------------------------------------------------------------------ */
 +
-+#define D2XQ_CONSOLE_SCALE  3u
++#define D2XQ_CONSOLE_SCALE  6u
 +#define D2XQ_CONSOLE_STRIDE 5760u
 +#define D2XQ_CONSOLE_WIDTH  1440u
 +#define D2XQ_CONSOLE_HEIGHT 3040u
-+#define D2XQ_CONSOLE_X0     64u
++#define D2XQ_CONSOLE_X0     96u
 +#define D2XQ_CONSOLE_Y0     1500u
 +
 +static const unsigned long long d2xq_font[96] = {
