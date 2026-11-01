@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..e8533b2 100644
+index 5b91579..8099f65 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -106,17 +106,15 @@ index 5b91579..e8533b2 100644
  	}
  
  	if (load_result.hardened_runtime_binary) {
-@@ -1829,6 +1846,18 @@ grade:
+@@ -1828,7 +1845,16 @@ grade:
+ 			goto badtoolate;
  		}
  		/* Set the stack */
++		/* d2xq: the AArch64 ABI requires a 16-byte aligned stack pointer.
++		 * exec_copyout_strings leaves ap 8-byte aligned, and a misaligned SP
++		 * makes every SP-relative store take an alignment fault (SIGBUS). */
++		ap = (user_addr_t)((uintptr_t)ap & ~(uintptr_t)0xF);
  		thread_setuserstack(thread, ap);
-+		panic("D2XQ stack us=%llx sz=%llx custom=%d alloc=%llx ap=%llx entry=%llx",
-+		    (unsigned long long)load_result.user_stack,
-+		    (unsigned long long)load_result.user_stack_size,
-+		    (int)load_result.custom_stack,
-+		    (unsigned long long)load_result.user_stack_alloc_size,
-+		    (unsigned long long)(uintptr_t)ap,
-+		    (unsigned long long)load_result.entry_point);
 +		{
 +			extern void d2xq_bar_stage(unsigned int);
 +
@@ -125,7 +123,7 @@ index 5b91579..e8533b2 100644
  	}
  
  	if (load_result.dynlinker || load_result.is_rosetta) {
-@@ -2130,6 +2159,7 @@ cleanup_rosetta_fp:
+@@ -2130,6 +2156,7 @@ cleanup_rosetta_fp:
  	goto done;
  
  badtoolate:
@@ -133,7 +131,7 @@ index 5b91579..e8533b2 100644
  	/* Don't allow child process to execute any instructions */
  	if (!spawn) {
  		{
-@@ -5268,6 +5298,11 @@ __mac_execve(proc_t p, struct __mac_execve_args *uap, int32_t *retval __unused)
+@@ -5268,6 +5295,11 @@ __mac_execve(proc_t p, struct __mac_execve_args *uap, int32_t *retval __unused)
  	 */
  	error = exec_activate_image(imgp);
  	/* thread and task ref returned for vfexec case */
@@ -145,7 +143,7 @@ index 5b91579..e8533b2 100644
  
  	if (imgp->ip_new_thread != NULL) {
  		/*
-@@ -5486,6 +5521,11 @@ exit_with_error:
+@@ -5486,6 +5518,11 @@ exit_with_error:
  		ipc_importance_release(inherit);
  	}
  
@@ -157,7 +155,7 @@ index 5b91579..e8533b2 100644
  	return error;
  }
  
-@@ -8956,3 +8996,3804 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
+@@ -8956,3 +8993,3804 @@ sysctl_libmalloc_experiments SYSCTL_HANDLER_ARGS
  }
  
  EXPERIMENT_FACTOR_PROC(_kern, libmalloc_experiments, CTLTYPE_QUAD | CTLFLAG_RW, 0, 0, &sysctl_libmalloc_experiments, "A", "");
