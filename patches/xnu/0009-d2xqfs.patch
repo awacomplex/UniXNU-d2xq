@@ -41,7 +41,7 @@ index 37017cf..06026d6 100644
  }
  
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index 5b91579..8024cba 100644
+index 5b91579..35e3a78 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
 @@ -1674,6 +1674,11 @@ grade:
@@ -3041,7 +3041,7 @@ index 5b91579..8024cba 100644
 +#define D2XQ_CONSOLE_WIDTH  1440u
 +#define D2XQ_CONSOLE_HEIGHT 3040u
 +#define D2XQ_CONSOLE_X0     96u
-+#define D2XQ_CONSOLE_Y0     1500u
++#define D2XQ_CONSOLE_Y0     2400u
 +
 +static const unsigned long long d2xq_font[96] = {
 +	0x0000000000000000, 0x0842108000020084, 0x0005294000000000, 0x15F528000000295F,
