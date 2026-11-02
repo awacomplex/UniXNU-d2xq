@@ -68,6 +68,8 @@ archives = [
   "build-software-aes-bindings.py",
   "component:VirtioMmioBlock",
   "component:RamBlock",
+  # 公开 IOStorageFamily 基类源码（本内核 collection 不含该 kext，必须自行编译）
+  "build-d2xq-source-storage.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
   "component:ShengUfs",
   # build-virtio-mmio-bindings.py 需要 build/storage-abi/interface-audit.json，
@@ -144,3 +146,4 @@ props = [
   # 实测 DTB：/reserved-memory/cont_splash_region = 0x9c400000 + 0x2000000
   { name = "reg", type = "x", value = ["0x0", "0x9c400000", "0x0", "0x2000000"] },
 ]
+
