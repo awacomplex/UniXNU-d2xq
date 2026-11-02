@@ -5,7 +5,9 @@
 # TODO(P2): SM8150 专用组件开发完成后，在此追加设备级 CONFIG
 
 # UFS 存储（ShengUfs/NativeUfs，SM8150 personality 已在 pinned 版本中）
-# CONFIG_XNU_NATIVE_UFS=y
+CONFIG_XNU_NATIVE_UFS=y
 # 构建并链接存储 archive（NativeUfs/RamBlock/VirtioMmioBlock）
-CONFIG_XNU_BUILD_ARCHIVES=y  (需要 IOStorageFamily 源构建，见 scripts/build-sheng-source-storage.py，当前框架提交没有)
 
+
+# 存储 archive：构建并链接 NativeUfs/RamBlock/VirtioMmioBlock（需要 IOStorageFamily 源/绑定）
+CONFIG_XNU_BUILD_ARCHIVES=y
