@@ -66,7 +66,8 @@ def compile_command(record, source: Path, obj: Path):
         elif value not in ('-MD', '-MP'):
             command.append(value)
         index += 1
-    command += ['-I', str(HEADERS), '-I', str(ROOT / '.cache/xnu-work/osfmk'), '-Wno-error']
+    command += ['-I', str(HEADERS), '-I', str(ROOT / '.cache/xnu-work/osfmk'), '-Wno-error',
+                '-DNATIVE_UFS_SOURCE_API=1']
     return command
 
 
