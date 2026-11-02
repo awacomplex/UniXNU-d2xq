@@ -12,7 +12,6 @@ extern kmod_info_t g_kernel_kmod_info;
 extern "C" void source_storage_base_init(void) __asm__("__GLOBAL__sub_I_IOBlockStorageDevice.cpp");
 extern "C" void source_storage_ufs_init(void) __asm__("__GLOBAL__sub_I_NativeUfs.cpp");
 extern "C" void source_storage_ram_init(void) __asm__("__GLOBAL__sub_I_NativeRamBlock.cpp");
-extern "C" IOService *native_ufs_source_create(void);
 
 static const OSMetaClass *storageParent;
 static bool attempted;
@@ -67,7 +66,9 @@ extern "C" void native_source_storage_start(void)
 	if (!provider) {
 		panic("SourceStorage: platform root unavailable");
 	}
-	IOService *driver = native_ufs_source_create();
+	// The pinned NativeUfs build has no source factory; allocate the registered
+	// class directly (same object the factory would return).
+	IOService *driver = OSDynamicCast(IOService, OSMetaClass::allocClassWithName("NativeUfs"));
 	if (!driver) {
 		panic("SourceStorage: cannot allocate UFS service");
 	}
