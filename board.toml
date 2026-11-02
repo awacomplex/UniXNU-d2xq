@@ -66,6 +66,9 @@ archives = [
   "component:ArmCpu",
   "component:SoftwareAES",
   "build-software-aes-bindings.py",
+  "component:VirtioMmioBlock",
+  "component:RamBlock",
+  "component:ShengUfs",
   # 源构建块存储运行时：编译公开 IOBlockStorageDevice（改名晚注册）+ NativeUfs/NativeRamBlock
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
   "build-d2xq-source-storage.py",

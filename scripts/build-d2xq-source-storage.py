@@ -126,10 +126,15 @@ def main():
         sys.exit('llvm-ar not found')
     ARCHIVE.unlink(missing_ok=True)
     subprocess.run([ar, 'rcs', str(ARCHIVE), *map(str, objects)], check=True)
-    for catalog in ('build/sheng-ufs/libShengUfs.a', 'build/ram-block/libRamBlock.a'):
-        target = ROOT / catalog
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ARCHIVE, target)
+    # The UFS link force-loads the catalog archive; the RAM link force-loads its own.
+    # Keep one copy of every object: full archive for UFS, empty archive for RAM.
+    ufs = ROOT / 'build/sheng-ufs/libShengUfs.a'
+    ufs.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ARCHIVE, ufs)
+    ram = ROOT / 'build/ram-block/libRamBlock.a'
+    ram.parent.mkdir(parents=True, exist_ok=True)
+    ram.unlink(missing_ok=True)
+    subprocess.run([ar, 'rcs', str(ram)], check=True)
     print(f'PASS: {len(objects)} late-registration objects archived -> {ARCHIVE}')
 
 
