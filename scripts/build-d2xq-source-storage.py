@@ -185,6 +185,29 @@ def main():
         if 'kDataMax = 131072' in text:
             layout.write_text(text.replace('kDataMax = 131072', 'kDataMax = 4096'))
 
+    # Command-layer markers: doorbell, poll start/end and a periodic poll dot.
+    commands = ufs_include / 'RootCommands.h'
+    if commands.is_file():
+        text = commands.read_text()
+        if 'd2xq_console_text' not in text:
+            text = text.replace('#include <IOKit/IOLib.h>',
+                                '#include <IOKit/IOLib.h>\nextern "C" void d2xq_console_text(const char *);', 1)
+            if 'extern "C" void d2xq_console_text' not in text:
+                text = 'extern "C" void d2xq_console_text(const char *);\n' + text
+            text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
+            text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
+            text = text.replace('  gRootDiagnostic.polls = state.polls;',
+                                '  d2xq_console_text("C3 ");\n  gRootDiagnostic.polls = state.polls;', 1)
+            commands.write_text(text)
+    poll = ufs_include / 'TransferPoll.h'
+    if poll.is_file():
+        text = poll.read_text()
+        if 'd2xq_console_text' not in text:
+            text = text.replace('    ++state.polls;',
+                                '    ++state.polls;\n    if ((state.polls % 20000) == 0) d2xq_console_text(".");', 1)
+            text = 'extern "C" void d2xq_console_text(const char *);\n' + text
+            poll.write_text(text)
+
     record = load_record()
     objects = []
     for source in (base_source, native_ufs, native_ram, source_storage):
