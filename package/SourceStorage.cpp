@@ -2,7 +2,10 @@
 // d2xq: start the source-backed UFS adapter after the original storage family loads.
 #include <IOKit/IOService.h>
 #include <IOKit/IOPlatformExpert.h>
+#include <IOKit/IODeviceTreeSupport.h>
 #include <IOKit/storage/IOBlockStorageDevice.h>
+#include <libkern/c++/OSData.h>
+#include <libkern/c++/OSString.h>
 #include <libkern/OSKextLib.h>
 #include <libkern/c++/OSSymbol.h>
 #include <mach/kmod.h>
@@ -75,7 +78,26 @@ extern "C" void native_source_storage_start(void)
 	const char *step = !driver->init() ? "init" : !driver->attach(provider) ? "attach" :
 	    !driver->start(provider) ? "start" : nullptr;
 	if (step) {
-		panic("SourceStorage: UFS %s failed", step);
+		IORegistryEntry *ufs = IORegistryEntry::fromPath("/arm-io/ufshc", gIODTPlane);
+		char compatible[96] = {};
+		const char *text = "none";
+		if (ufs) {
+			OSObject *property = ufs->getProperty("compatible");
+			OSData *data = OSDynamicCast(OSData, property);
+			OSString *string = OSDynamicCast(OSString, property);
+			if (data) {
+				unsigned length = data->getLength() > 80 ? 80 : data->getLength();
+				memcpy(compatible, data->getBytesNoCopy(), length);
+				text = compatible;
+			} else if (string) {
+				strlcpy(compatible, string->getCStringNoCopy(), sizeof(compatible));
+				text = compatible;
+			}
+		}
+		panic("SourceStorage: UFS %s failed\nufshc=%p compatible=%.48s\nprovider=%s driver=%s",
+		    step, ufs, text,
+		    provider->getMetaClass() ? provider->getMetaClass()->getClassName() : "?",
+		    driver->getMetaClass() ? driver->getMetaClass()->getClassName() : "?");
 	}
 	printf("SourceStorage: UFS started through public IOStorageFamily interface\n");
 }
