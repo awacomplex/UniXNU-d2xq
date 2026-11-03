@@ -129,10 +129,8 @@ def main():
 
     record = load_record()
     objects = []
-    for source, symbol in ((base_source, 'IOBlockStorageDevice.cpp'),
-                           (native_ufs, 'NativeUfs.cpp'),
-                           (native_ram, 'NativeRamBlock.cpp'),
-                           (source_storage, 'SourceStorage.cpp')):
+    for source in (base_source, native_ufs, native_ram, source_storage):
+        symbol = source.name
         obj = OUT / (source.stem + '.o')
         command = compile_command(record, source, obj)
         result = subprocess.run(command, cwd=record['directory'], capture_output=True, text=True)
