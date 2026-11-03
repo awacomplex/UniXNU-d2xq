@@ -108,6 +108,24 @@ def main():
     if not source_storage.is_file():
         sys.exit(f'{source_storage} missing')
 
+    # d2xq: the board ADT does not publish /arm-io/ufshc yet, so fall back to
+    # the driver's built-in SM8150 controller description instead of failing.
+    ufs_text = native_ufs.read_text()
+    missing = '''  if (!ufs) {
+    IOLog ("NativeUfs: missing /arm-io/ufshc hardware description\\n");
+    return false;
+  }'''
+    fallback = '''  if (!ufs) {
+    IOLog ("NativeUfs: no /arm-io/ufshc node; d2xq uses the SM8150 defaults\\n");
+    gHardware = kSm8150Ufs;
+    return true;
+  }'''
+    if missing not in ufs_text:
+        sys.exit('pinned NativeUfs selectHardware text changed')
+    patched_ufs = OUT / 'NativeUfs.cpp'
+    patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
+    native_ufs = patched_ufs
+
     record = load_record()
     objects = []
     for source, symbol in ((base_source, 'IOBlockStorageDevice.cpp'),
