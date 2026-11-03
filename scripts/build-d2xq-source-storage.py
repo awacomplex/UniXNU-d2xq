@@ -162,7 +162,10 @@ def main():
         ufs_text = ufs_text.replace(anchor_text, marker + anchor_text, 1)
     if 'extern "C" volatile int d2xq_ufs_stage;' not in ufs_text:
         ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
-                                    'extern "C" volatile int d2xq_ufs_stage;\nclass NativeUfs : public IOService {', 1)
+                                    'extern "C" volatile int d2xq_ufs_stage;\nextern "C" void d2xq_console_text(const char *);\nclass NativeUfs : public IOService {', 1)
+    for number in (100, 101, 102, 103, 104, 105, 106, 107, 200, 201, 202, 203, 204):
+        ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
+                                    f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
