@@ -128,6 +128,41 @@ def main():
     # the driver headers are added as an include directory instead.
     ufs_include = native_ufs.parent
     (OUT / 'driver').mkdir(parents=True, exist_ok=True)
+    stages = [
+        ('  OSSharedPtr<IOMemoryMap> hcMap;\n  uintptr_t hc = mapPhys (gHardware.controllerBase, gHardware.controllerSize, hcMap);',
+         '  d2xq_ufs_stage = 100;\n', True),
+        ('  IOMemoryDescriptor *region = IOMemoryDescriptor::withPhysicalAddress',
+         '  d2xq_ufs_stage = 101;\n', True),
+        ('  uint8_t *virt = reinterpret_cast<uint8_t *> (regionMap->getVirtualAddress ());',
+         '  d2xq_ufs_stage = 102;\n', True),
+        ('  smmuBypassStream (gHardware.stream, smmuMap, smmuReport, phys, 16384);',
+         '  d2xq_ufs_stage = 103;\n', True),
+        ('  write32 (hc, 0x50, static_cast<uint32_t> (phys));',
+         '  d2xq_ufs_stage = 104;\n', True),
+        ('  if (level == 3) {',
+         '  d2xq_ufs_stage = 105;\n', True),
+        ('    write32 (hc, 0x58, 1);          // ring slot 0',
+         '    d2xq_ufs_stage = 106;\n', True),
+        ('    if (!done) {',
+         '    d2xq_ufs_stage = 107;\n', True),
+        ('  gRootDiagnostic.stage = "DMA allocation";',
+         '  d2xq_ufs_stage = 200;\n', True),
+        ('  if (!hostStopQueue (why)) return false;',
+         '  d2xq_ufs_stage = 201;\n', True),
+        ('  smmuBypassStream (gHardware.stream, gHost.smmuMap, report, gHost.phys, kDmaBytes);',
+         '  d2xq_ufs_stage = 202;\n', True),
+        ('  if (!hostStartQueue (why)) return false;',
+         '  d2xq_ufs_stage = 203;\n', True),
+        ('  if (hostNop () != kIOReturnSuccess) {',
+         '  d2xq_ufs_stage = 204;\n', True),
+    ]
+    for anchor_text, marker, before in stages:
+        if anchor_text not in ufs_text:
+            sys.exit('stage anchor missing: ' + anchor_text[:60])
+        ufs_text = ufs_text.replace(anchor_text, marker + anchor_text, 1)
+    if 'extern "C" volatile int d2xq_ufs_stage;' not in ufs_text:
+        ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
+                                    'extern "C" volatile int d2xq_ufs_stage;\nclass NativeUfs : public IOService {', 1)
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs

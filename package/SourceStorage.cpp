@@ -10,6 +10,8 @@
 #include <libkern/c++/OSSymbol.h>
 #include <mach/kmod.h>
 #include <pexpert/pexpert.h>
+#include <kern/thread.h>
+#include <IOKit/IOLib.h>
 
 extern kmod_info_t g_kernel_kmod_info;
 extern "C" void source_storage_base_init(void) __asm__("__GLOBAL__sub_I_IOBlockStorageDevice.cpp");
@@ -18,6 +20,18 @@ extern "C" void source_storage_ram_init(void) __asm__("__GLOBAL__sub_I_NativeRam
 
 static const OSMetaClass *storageParent;
 static bool attempted;
+
+// The driver records its bring-up stage here so the watchdog can report a stall.
+extern "C" volatile int d2xq_ufs_stage = -1;
+
+static void
+d2xq_ufs_watchdog(void *, wait_result_t)
+{
+	IOSleep(8000);
+	if (d2xq_ufs_stage >= 0) {
+		panic("SourceStorage: UFS stalled at stage %d", d2xq_ufs_stage);
+	}
+}
 
 // Used only by the deferred source IOBlockStorageDevice metaclass constructor.
 // The C++ class name stays unchanged; only its registered name differs.
@@ -71,6 +85,11 @@ extern "C" void native_source_storage_start(void)
 	}
 	// The pinned NativeUfs build has no source factory; allocate the registered
 	// class directly (same object the factory would return).
+	d2xq_ufs_stage = 0;
+	thread_t watchdog = nullptr;
+	if (kernel_thread_start(d2xq_ufs_watchdog, nullptr, &watchdog) == KERN_SUCCESS) {
+		thread_deallocate(watchdog);
+	}
 	IOService *driver = OSDynamicCast(IOService, OSMetaClass::allocClassWithName("NativeUfs"));
 	if (!driver) {
 		panic("SourceStorage: cannot allocate UFS service");
@@ -99,5 +118,6 @@ extern "C" void native_source_storage_start(void)
 		    provider->getMetaClass() ? provider->getMetaClass()->getClassName() : "?",
 		    driver->getMetaClass() ? driver->getMetaClass()->getClassName() : "?");
 	}
+	d2xq_ufs_stage = -1;
 	printf("SourceStorage: UFS started through public IOStorageFamily interface\n");
 }
