@@ -45,7 +45,7 @@ def load_record():
     return json.loads(RECORD.read_text().strip().rstrip(','))
 
 
-def compile_command(record, source: Path, obj: Path):
+def compile_command(record, source: Path, obj: Path, extra_includes=()):
     args = list(record['arguments'])
     command = []
     index = 0
@@ -68,6 +68,8 @@ def compile_command(record, source: Path, obj: Path):
         index += 1
     command += ['-I', str(HEADERS), '-I', str(ROOT / '.cache/xnu-work/osfmk'), '-Wno-error',
                 '-DNATIVE_UFS_SOURCE_API=1']
+    for include in extra_includes:
+        command += ['-I', str(include)]
     return command
 
 
@@ -122,8 +124,11 @@ def main():
   }'''
     if missing not in ufs_text:
         sys.exit('pinned NativeUfs selectHardware text changed')
-    # Keep the patched copy next to the driver so its quoted headers resolve.
-    patched_ufs = native_ufs.parent / 'NativeUfs.d2xq.cpp'
+    # Keep the file name so the compiler-authored init symbol stays NativeUfs.cpp;
+    # the driver headers are added as an include directory instead.
+    ufs_include = native_ufs.parent
+    (OUT / 'driver').mkdir(parents=True, exist_ok=True)
+    patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
 
@@ -132,7 +137,8 @@ def main():
     for source in (base_source, native_ufs, native_ram, source_storage):
         symbol = source.name
         obj = OUT / (source.stem + '.o')
-        command = compile_command(record, source, obj)
+        extra = (ufs_include,) if source == native_ufs else ()
+        command = compile_command(record, source, obj, extra)
         result = subprocess.run(command, cwd=record['directory'], capture_output=True, text=True)
         (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
         if result.returncode:
