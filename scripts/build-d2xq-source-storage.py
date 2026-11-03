@@ -208,6 +208,25 @@ def main():
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             poll.write_text(text)
 
+    # Shorten command timeouts so a stalled transfer fails within a few hundred
+    # milliseconds, and mark each return path of hostSubmit.
+    for header_name in ('RootCommands.h', 'NativeUfs.cpp'):
+        header = ufs_include / header_name if (ufs_include / header_name).is_file() else OUT / 'driver' / header_name
+        if not header.is_file():
+            continue
+        text = header.read_text()
+        text = text.replace('200000', '20000').replace('500000', '50000')
+        if header_name == 'RootCommands.h':
+            text = text.replace('  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);',
+                                '  d2xq_console_text("C4 ");\n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
+            text = text.replace('  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);',
+                                '  d2xq_console_text("C5 ");\n  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);', 1)
+        else:
+            text = text.replace('    IOSleep (10);', '    d2xq_console_text("T ");\n    IOSleep (10);', 1)
+            text = text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
+                                'panic ("NATIVE_UFS root check: bring-up failed: %s ocs=%u resp=%08x scsi=%u polls=%u", why, gRootDiagnostic.ocs, gRootDiagnostic.response, gRootDiagnostic.scsi, gRootDiagnostic.polls);', 1)
+        header.write_text(text)
+
     record = load_record()
     objects = []
     for source in (base_source, native_ufs, native_ram, source_storage):
