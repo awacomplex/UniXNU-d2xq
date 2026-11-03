@@ -122,7 +122,8 @@ def main():
   }'''
     if missing not in ufs_text:
         sys.exit('pinned NativeUfs selectHardware text changed')
-    patched_ufs = OUT / 'NativeUfs.cpp'
+    # Keep the patched copy next to the driver so its quoted headers resolve.
+    patched_ufs = native_ufs.parent / 'NativeUfs.d2xq.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
 
