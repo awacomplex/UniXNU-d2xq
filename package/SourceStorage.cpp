@@ -27,7 +27,7 @@ extern "C" volatile int d2xq_ufs_stage = -1;
 static void
 d2xq_ufs_watchdog(void *, wait_result_t)
 {
-	IOSleep(8000);
+	IOSleep(20000);
 	if (d2xq_ufs_stage >= 0) {
 		panic("SourceStorage: UFS stalled at stage %d", d2xq_ufs_stage);
 	}
@@ -52,10 +52,17 @@ extern "C" void native_source_storage_start(void)
 	}
 	attempted = true;
 
+	d2xq_ufs_stage = 1;
+	thread_t watchdog = nullptr;
+	if (kernel_thread_start(d2xq_ufs_watchdog, nullptr, &watchdog) == KERN_SUCCESS) {
+		thread_deallocate(watchdog);
+	}
+
 	OSReturn status = OSKextLoadKextWithIdentifier("com.apple.iokit.IOStorageFamily");
 	if (status != kOSReturnSuccess) {
 		panic("SourceStorage: IOStorageFamily load failed %x", status);
 	}
+	d2xq_ufs_stage = 2;
 	const OSSymbol *name = OSSymbol::withCString("IOBlockStorageDevice");
 	storageParent = name ? OSMetaClass::getMetaClassWithName(name) : nullptr;
 	if (name) {
@@ -66,10 +73,12 @@ extern "C" void native_source_storage_start(void)
 		    storageParent ? storageParent->getClassSize() : 0, sizeof(IOBlockStorageDevice));
 	}
 
+	d2xq_ufs_stage = 3;
 	void *handle = OSMetaClass::preModLoad(g_kernel_kmod_info.name);
 	if (!handle) {
 		panic("SourceStorage: cannot begin class registration");
 	}
+	d2xq_ufs_stage = 4;
 	source_storage_base_init();
 	source_storage_ufs_init();
 	source_storage_ram_init();
@@ -78,18 +87,16 @@ extern "C" void native_source_storage_start(void)
 		panic("SourceStorage: class registration failed %x", status);
 	}
 
+	d2xq_ufs_stage = 5;
 	OSDictionary *matching = IOService::serviceMatching("IOPlatformExpertDevice");
 	IOService *provider = matching ? IOService::waitForMatchingService(matching, 5000000000ULL) : nullptr;
 	if (!provider) {
 		panic("SourceStorage: platform root unavailable");
 	}
+	d2xq_ufs_stage = 6;
 	// The pinned NativeUfs build has no source factory; allocate the registered
 	// class directly (same object the factory would return).
-	d2xq_ufs_stage = 0;
-	thread_t watchdog = nullptr;
-	if (kernel_thread_start(d2xq_ufs_watchdog, nullptr, &watchdog) == KERN_SUCCESS) {
-		thread_deallocate(watchdog);
-	}
+	d2xq_ufs_stage = 7;
 	IOService *driver = OSDynamicCast(IOService, OSMetaClass::allocClassWithName("NativeUfs"));
 	if (!driver) {
 		panic("SourceStorage: cannot allocate UFS service");
