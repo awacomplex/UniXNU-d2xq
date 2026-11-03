@@ -147,6 +147,12 @@ def main():
          '    d2xq_ufs_stage = 107;\n', True),
         ('  gRootDiagnostic.stage = "DMA allocation";',
          '  d2xq_ufs_stage = 200;\n', True),
+        ('  gHost.dma = IOBufferMemoryDescriptor::inTaskWithOptions (',
+         '  d2xq_ufs_stage = 205;\n', True),
+        ('  gHost.lock = IOLockAlloc ();',
+         '  d2xq_ufs_stage = 206;\n', True),
+        ('  bzero (gHost.virt, kDmaBytes);',
+         '  d2xq_ufs_stage = 207;\n', True),
         ('  if (!hostStopQueue (why)) return false;',
          '  d2xq_ufs_stage = 201;\n', True),
         ('  smmuBypassStream (gHardware.stream, gHost.smmuMap, report, gHost.phys, kDmaBytes);',
@@ -163,7 +169,7 @@ def main():
     if 'extern "C" volatile int d2xq_ufs_stage;' not in ufs_text:
         ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
                                     'extern "C" volatile int d2xq_ufs_stage;\nextern "C" void d2xq_console_text(const char *);\nclass NativeUfs : public IOService {', 1)
-    for number in (100, 101, 102, 103, 104, 105, 106, 107, 200, 201, 202, 203, 204):
+    for number in (100, 101, 102, 103, 104, 105, 106, 107, 200, 205, 206, 207, 201, 202, 203, 204):
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
