@@ -176,6 +176,15 @@ def main():
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
 
+    # A 136 KiB physically-contiguous request may never be satisfied at this boot
+    # point; a 4 KiB data window is enough for GPT/manifest reads and keeps the
+    # allocation small.
+    layout = ufs_include / 'RootTransportLayout.h'
+    if layout.is_file():
+        text = layout.read_text()
+        if 'kDataMax = 131072' in text:
+            layout.write_text(text.replace('kDataMax = 131072', 'kDataMax = 4096'))
+
     record = load_record()
     objects = []
     for source in (base_source, native_ufs, native_ram, source_storage):
