@@ -173,6 +173,14 @@ def main():
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
+    # Apply the driver-side instrumentation to the copy that is actually compiled.
+    compiled = patched_ufs.read_text()
+    compiled = compiled.replace('500000', '50000').replace('200000', '20000')
+    compiled = compiled.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
+                                '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
+    compiled = compiled.replace('      if (!runtimeQueueStart (why)) {',
+                                '      d2xq_console_text("B ");\n      if (!runtimeQueueStart (why)) {', 1)
+    patched_ufs.write_text(compiled)
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
 
@@ -226,6 +234,21 @@ def main():
             text = text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
                                 'panic ("NATIVE_UFS root check: bring-up failed: %s ocs=%u resp=%08x scsi=%u polls=%u", why, gRootDiagnostic.ocs, gRootDiagnostic.response, gRootDiagnostic.scsi, gRootDiagnostic.polls);', 1)
         header.write_text(text)
+
+    layout_hdr = ufs_include / 'RootLayout.h'
+    if layout_hdr.is_file():
+        text = layout_hdr.read_text()
+        if 'd2xq_console_text' not in text:
+            text = 'extern "C" void d2xq_console_text(const char *);\n' + text
+            text = text.replace('  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {',
+                                '  d2xq_console_text("G1 ");\n  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {', 1)
+            text = text.replace('  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {',
+                                '  d2xq_console_text("G2 ");\n  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {', 1)
+            text = text.replace('  static const char wanted[] = "userdata";',
+                                '  d2xq_console_text("G3 ");\n  static const char wanted[] = "userdata";', 1)
+            text = text.replace('  if (readManifest) {',
+                                '  d2xq_console_text("G4 ");\n  if (readManifest) {', 1)
+            layout_hdr.write_text(text)
 
     record = load_record()
     objects = []
