@@ -173,6 +173,9 @@ def main():
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
+    ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
+    ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
+                                'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
@@ -206,7 +209,7 @@ def main():
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
-                                '  d2xq_console_text("Q ");\n  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];', 1)
+                                '  { unsigned v = ((unsigned (rsp[6]) << 8) | rsp[7]) & 0xffU; char h[2] = { char (v < 10 ? 48 + v : 65 + v - 10), 0 }; d2xq_console_text("Q"); d2xq_console_text(h); d2xq_console_text(" "); }\n  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];', 1)
             text = text.replace('  gRootDiagnostic.polls = state.polls;',
                                 '  d2xq_console_text("C3 ");\n  gRootDiagnostic.polls = state.polls;', 1)
             commands.write_text(text)
