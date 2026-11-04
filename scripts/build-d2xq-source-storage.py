@@ -172,15 +172,12 @@ def main():
     for number in (100, 101, 102, 103, 104, 105, 106, 107, 200, 205, 206, 207, 201, 202, 203, 204):
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
-    patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
-    # Apply the driver-side instrumentation to the copy that is actually compiled.
-    compiled = patched_ufs.read_text()
-    compiled = compiled.replace('500000', '50000').replace('200000', '20000')
-    compiled = compiled.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
+    ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
+    ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
-    compiled = compiled.replace('      if (!runtimeQueueStart (why)) {',
+    ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
                                 '      d2xq_console_text("B ");\n      if (!runtimeQueueStart (why)) {', 1)
-    patched_ufs.write_text(compiled)
+    patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
 
