@@ -215,6 +215,10 @@ def main():
                                 'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
             text = text.replace('  UfsTransferPoll state;',
                                 '  UfsTransferPoll state;', 1)
+            if 'void delay () { IODelay (2); }' not in text:
+                sys.exit('delay anchor missing')
+            text = text.replace('void delay () { IODelay (2); }',
+                                'void delay () { for (volatile uint32_t spin = 0; spin < 50000; spin++) { } }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
