@@ -178,6 +178,8 @@ def main():
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
+    if '      if (hostScsi (0, capacity, 10, true, 8, 20000, &scsi) != kIOReturnSuccess) {' not in ufs_text:
+        sys.exit('capacity anchor missing')
     ufs_text = ufs_text.replace('      if (hostScsi (0, capacity, 10, true, 8, 20000, &scsi) != kIOReturnSuccess) {',
                                 '      { IOReturn cr = hostScsi (0, capacity, 10, true, 8, 20000, &scsi);\n'
                                 '        panic ("CAP ret=%x scsi=%04x blk=%08x sz=%08x", cr, scsi, loadBe32 (gHost.virt + kDataOffset), loadBe32 (gHost.virt + kDataOffset + 4)); }\n'
@@ -221,6 +223,8 @@ def main():
     if poll.is_file():
         text = poll.read_text()
         if 'd2xq_console_text' not in text:
+            if '    ++state.polls;' not in text:
+                sys.exit('poll anchor missing')
             text = text.replace('    ++state.polls;',
                                 '    ++state.polls;\n    if ((state.polls % 100) == 0) d2xq_console_text(".");\n    if (state.polls > 500) return UfsTransferEnd::Timeout;', 1)
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
