@@ -224,6 +224,15 @@ def main():
     if poll.is_file():
         text = poll.read_text()
         if 'd2xq_console_text' not in text:
+            if 'bool expired ()' not in text:
+                sys.exit('expired anchor missing')
+            text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
+                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
+            if 'static uint32_t gPollCalls;' not in text:
+                text = text.replace('struct HardwareTransferPort {',
+                                    'static uint32_t gPollCalls;\nstruct HardwareTransferPort {', 1)
+            text = text.replace('  UfsTransferPoll state;',
+                                '  gPollCalls = 0;\n  UfsTransferPoll state;', 1)
             if '    ++state.polls;' not in text:
                 sys.exit('poll anchor missing')
             text = text.replace('    ++state.polls;',
