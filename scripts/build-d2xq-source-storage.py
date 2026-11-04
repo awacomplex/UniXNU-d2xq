@@ -209,6 +209,12 @@ def main():
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
+            if 'bool expired ()' not in text:
+                sys.exit('expired anchor missing')
+            text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
+                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
+            text = text.replace('  UfsTransferPoll state;',
+                                '  UfsTransferPoll state;', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
@@ -224,15 +230,6 @@ def main():
     if poll.is_file():
         text = poll.read_text()
         if 'd2xq_console_text' not in text:
-            if 'bool expired ()' not in text:
-                sys.exit('expired anchor missing')
-            text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
-                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
-            if 'static uint32_t gPollCalls;' not in text:
-                text = text.replace('struct HardwareTransferPort {',
-                                    'static uint32_t gPollCalls;\nstruct HardwareTransferPort {', 1)
-            text = text.replace('  UfsTransferPoll state;',
-                                '  gPollCalls = 0;\n  UfsTransferPoll state;', 1)
             if '    ++state.polls;' not in text:
                 sys.exit('poll anchor missing')
             text = text.replace('    ++state.polls;',
