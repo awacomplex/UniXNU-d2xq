@@ -177,15 +177,11 @@ def main():
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
-                                '    { char u[4] = { \'U\', char (\'0\' + attempt), \' \', 0 }; d2xq_console_text(u); }\n'
-                                '    { IOReturn tr = hostScsi (0, tur, 6, false, 0, 20000, &scsi);\n'
-                                '      const uint8_t *rp = (const uint8_t *) gHost.virt + kUcdOffset + kRspOffset;\n'
-                                '      panic ("TUR ret=%x ocs=%u scsi=%04x rsp=%02x%02x%02x%02x", tr, gRootDiagnostic.ocs, gRootDiagnostic.scsi, rp[0], rp[1], rp[6], rp[7]); }\n'
-                                '    if (false) {', 1)
-    ufs_text = ufs_text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
-                                'panic ("NATIVE_UFS bring-up failed: %s\\nocs=%u resp=%08x scsi=%04x sense=%06x polls=%u", why, gRootDiagnostic.ocs, gRootDiagnostic.response, gRootDiagnostic.scsi, gRootDiagnostic.sense, gRootDiagnostic.polls);')
-    ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
-                                '      d2xq_console_text("B ");\n      if (!runtimeQueueStart (why)) {', 1)
+                                '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
+    ufs_text = ufs_text.replace('      if (hostScsi (0, capacity, 10, true, 8, 20000, &scsi) != kIOReturnSuccess) {',
+                                '      { IOReturn cr = hostScsi (0, capacity, 10, true, 8, 20000, &scsi);\n'
+                                '        panic ("CAP ret=%x scsi=%04x blk=%08x sz=%08x", cr, scsi, loadBe32 (gHost.virt + kDataOffset), loadBe32 (gHost.virt + kDataOffset + 4)); }\n'
+                                '      if (false) {', 1)
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
