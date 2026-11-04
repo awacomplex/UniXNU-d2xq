@@ -218,7 +218,7 @@ def main():
         text = poll.read_text()
         if 'd2xq_console_text' not in text:
             text = text.replace('    ++state.polls;',
-                                '    ++state.polls;\n    if ((state.polls % 20000) == 0) d2xq_console_text(".");', 1)
+                                '    ++state.polls;\n    if (state.polls > 300000) return UfsTransferEnd::Timeout;\n    if ((state.polls % 50000) == 0) d2xq_console_text(".");', 1)
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             poll.write_text(text)
 
