@@ -177,7 +177,7 @@ def main():
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
-                                '    { char u[3] = { \'U\', char (\'0\' + attempt), \' \' }; d2xq_console_text(u); }\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
+                                '    { char u[4] = { \'U\', char (\'0\' + attempt), \' \', 0 }; d2xq_console_text(u); }\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
                                 'panic ("NATIVE_UFS bring-up failed: %s\\nocs=%u resp=%08x scsi=%04x sense=%06x polls=%u", why, gRootDiagnostic.ocs, gRootDiagnostic.response, gRootDiagnostic.scsi, gRootDiagnostic.sense, gRootDiagnostic.polls);')
     ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
