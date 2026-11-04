@@ -178,13 +178,6 @@ def main():
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
-    if '      if (hostScsi (0, capacity, 10, true, 8, 20000, &scsi) != kIOReturnSuccess) {' not in ufs_text:
-        sys.exit('capacity anchor missing')
-    ufs_text = ufs_text.replace('      if (hostScsi (0, capacity, 10, true, 8, 20000, &scsi) != kIOReturnSuccess) {',
-                                '      d2xq_ufs_stage = 300; d2xq_console_text("K ");\n'
-                                '      { IOReturn cr = hostScsi (0, capacity, 10, true, 8, 20000, &scsi);\n'
-                                '        panic ("CAP ret=%x scsi=%04x blk=%08x sz=%08x", cr, scsi, loadBe32 (gHost.virt + kDataOffset), loadBe32 (gHost.virt + kDataOffset + 4)); }\n'
-                                '      if (false) {', 1)
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
     patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
     native_ufs = patched_ufs
@@ -209,16 +202,12 @@ def main():
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
-            if 'bool expired ()' not in text:
+            if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
+            text = text.replace('void delay () { IODelay (2); }',
+                                'void delay () { for (volatile uint32_t spin = 0; spin < 20000; spin++) { } }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
                                 'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
-            text = text.replace('  UfsTransferPoll state;',
-                                '  UfsTransferPoll state;', 1)
-            if 'void delay () { IODelay (2); }' not in text:
-                sys.exit('delay anchor missing')
-            text = text.replace('void delay () { IODelay (2); }',
-                                'void delay () { for (volatile uint32_t spin = 0; spin < 50000; spin++) { } }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
