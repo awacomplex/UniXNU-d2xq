@@ -175,6 +175,8 @@ def main():
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
+    ufs_text = ufs_text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
+                                'panic ("NATIVE_UFS bring-up failed: %s\\nocs=%u resp=%08x scsi=%04x sense=%06x polls=%u", why, gRootDiagnostic.ocs, gRootDiagnostic.response, gRootDiagnostic.scsi, gRootDiagnostic.sense, gRootDiagnostic.polls);')
     ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
                                 '      d2xq_console_text("B ");\n      if (!runtimeQueueStart (why)) {', 1)
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
@@ -201,6 +203,10 @@ def main():
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
+            text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
+                                '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
+            text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
+                                '  d2xq_console_text("Q ");\n  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];', 1)
             text = text.replace('  gRootDiagnostic.polls = state.polls;',
                                 '  d2xq_console_text("C3 ");\n  gRootDiagnostic.polls = state.polls;', 1)
             commands.write_text(text)
