@@ -191,15 +191,14 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = ('    { hostRead4k (0, 1, 1, gScratch);\n'
-             '      uint64_t my = (uint64_t) le32 (gScratch + 24) | ((uint64_t) le32 (gScratch + 28) << 32);\n'
-             '      uint64_t alt = (uint64_t) le32 (gScratch + 32) | ((uint64_t) le32 (gScratch + 36) << 32);\n'
-             '      uint64_t fu = (uint64_t) le32 (gScratch + 40) | ((uint64_t) le32 (gScratch + 44) << 32);\n'
-             '      uint64_t lu = (uint64_t) le32 (gScratch + 48) | ((uint64_t) le32 (gScratch + 52) << 32);\n'
-             '      uint64_t el = (uint64_t) le32 (gScratch + 72) | ((uint64_t) le32 (gScratch + 76) << 32);\n'
-             '      uint32_t cnt = le32 (gScratch + 80);\n'
-             '      panic ("GPT my=%llx alt=%llx first=%llx last=%llx\\nentries=%llx cnt=%u userdata=%llx..%llx",\n'
-             '        my, alt, fu, lu, el, cnt, layout->userdataFirst, layout->userdataLast); }\n')
+    probe = ('    { hostRead4k (0, layout->userdataFirst, 1, gScratch);\n'
+             '      uint8_t m0 = gScratch[0], m1 = gScratch[1], m2 = gScratch[2], m3 = gScratch[3];\n'
+             '      uint8_t m4 = gScratch[4], m5 = gScratch[5], m6 = gScratch[6], m7 = gScratch[7];\n'
+             '      uint64_t total = (uint64_t) le32 (gScratch + 16) | ((uint64_t) le32 (gScratch + 20) << 32);\n'
+             '      hostRead4k (0, layout->userdataFirst + 256, 1, gScratch);\n'
+             '      uint32_t apfs = le32 (gScratch + 32);\n'
+             '      panic ("UD %c%c%c%c%c%c%c%c tot=%llx apfs=%08x",\n'
+             '        m0, m1, m2, m3, m4, m5, m6, m7, total, apfs); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
