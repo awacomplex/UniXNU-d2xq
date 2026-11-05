@@ -176,11 +176,13 @@ def main():
                  '           "manifest status=%u windows=%u",\n'
                  '           layout->userdataFirst, layout->userdataLast, layout->magic0, layout->magic1,\n'
                  '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
-    new_probe = ('           "d0 %08x %08x %08x %08x f2fs=%08x\\n"\n'
+    new_probe = ('           "sb %08x v%04x.%04x blk=%llx seg0=%llx\\n"\n'
                  '           "ext4magic=%04x ext4blocks=%u status=%u windows=%u",\n'
                  '           layout->userdataFirst, layout->userdataLast,\n'
-                 '           le32 (gScratch), le32 (gScratch + 4), le32 (gScratch + 8), le32 (gScratch + 12),\n'
                  '           le32 (gScratch + 1024),\n'
+                 '           le32 (gScratch + 1024 + 4) & 0xffff, le32 (gScratch + 1024 + 4) >> 16,\n'
+                 '           (uint64_t) le32 (gScratch + 1024 + 36) | ((uint64_t) le32 (gScratch + 1024 + 40) << 32),\n'
+                 '           (uint64_t) le32 (gScratch + 1024 + 44) | ((uint64_t) le32 (gScratch + 1024 + 48) << 32),\n'
                  '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
     if old_probe in ufs_text:
         ufs_text = ufs_text.replace(old_probe, new_probe, 1)
