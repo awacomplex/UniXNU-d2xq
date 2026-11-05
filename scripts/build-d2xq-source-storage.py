@@ -191,13 +191,18 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = ('    { uint32_t ma = le32 (gScratch + 1024);\n'
-             '      uint64_t ba = (uint64_t) le32 (gScratch + 1060) | ((uint64_t) le32 (gScratch + 1064) << 32);\n'
-             '      hostRead4k (0, layout->userdataFirst / 8, 1, gScratch);\n'
-             '      uint32_t mb = le32 (gScratch + 1024);\n'
-             '      uint64_t bb = (uint64_t) le32 (gScratch + 1060) | ((uint64_t) le32 (gScratch + 1064) << 32);\n'
-             '      panic ("UFS addressing\\nA P=%llx magic=%08x blk=%llx\\nB P/8=%llx magic=%08x blk=%llx",\n'
-             '        layout->userdataFirst, ma, ba, layout->userdataFirst / 8, mb, bb); }\n')
+    probe = ('    { uint64_t wlba = layout->userdataLast - 16;\n'
+             '      for (unsigned wi = 0; wi < 4096; wi++) gScratch[wi] = (uint8_t) (wi * 7 + 0x5A);\n'
+             '      uint8_t wcdb[10] = { 0x2A, 0, uint8_t (wlba >> 24), uint8_t (wlba >> 16), uint8_t (wlba >> 8), uint8_t (wlba),\n'
+             '                           0, 0, 1, 0 };\n'
+             '      uint32_t wscsi = 0;\n'
+             '      IOReturn wr = hostScsiDir (0, wcdb, 10, 1, 4096, 20000, &wscsi);\n'
+             '      uint8_t pat0 = gScratch[0], patf = gScratch[4095];\n'
+             '      for (unsigned wi = 0; wi < 4096; wi++) gScratch[wi] = 0;\n'
+             '      IOReturn rd = hostRead4k (0, wlba, 1, gScratch);\n'
+             '      unsigned ok = (gScratch[0] == pat0 && gScratch[4095] == patf) ? 1U : 0U;\n'
+             '      panic ("UFS write test lba=%llx\\nwr=%x wscsi=%04x rd=%x ok=%u\\nb0=%02x bf=%02x",\n'
+             '        wlba, wr, wscsi, rd, ok, gScratch[0], gScratch[4095]); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
