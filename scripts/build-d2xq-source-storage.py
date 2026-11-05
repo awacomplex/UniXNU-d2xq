@@ -209,29 +209,18 @@ def main():
                                 '#include <IOKit/IOLib.h>\nextern "C" void d2xq_console_text(const char *);', 1)
             if 'extern "C" void d2xq_console_text' not in text:
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
-            text = text.replace('  hostWrite (0x58, 1);',
-                                '  { static unsigned d2xq_cmd; char d2xq_c[3] = { char (97 + (d2xq_cmd++ % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 }; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n  hostWrite (0x58, 1);', 1)
-            text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
             if 'IODelay (' in text:
                 text = text.replace('struct HardwareTransferPort {',
                                     'static inline void d2xq_nodelay (uint32_t) { }\nstruct HardwareTransferPort {', 1)
                 text = text.replace('IODelay (', 'd2xq_nodelay (')
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
-            text = text.replace('void delay () { IODelay (2); }',
-                                'void delay () { }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
                                 'bool expired () { static uint32_t calls; calls++; return calls > 100; }', 1)
-            text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
-                                '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
-            text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
-                                '  { unsigned v = ((unsigned (rsp[6]) << 8) | rsp[7]) & 0xffU; char h[2] = { char (v < 10 ? 48 + v : 65 + v - 10), 0 }; d2xq_console_text("Q"); d2xq_console_text(h); d2xq_console_text(" "); }\n  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];', 1)
-            text = text.replace('  IOReturn result = *scsiStatus == 0 ? kIOReturnSuccess : kIOReturnNotReady;',
-                                '  IOReturn result = *scsiStatus == 0 ? kIOReturnSuccess : kIOReturnNotReady;\n  d2xq_console_text(result == kIOReturnSuccess ? "G " : result == kIOReturnNotReady ? "N " : "E ");', 1)
-            text = text.replace('  if (status != kIOReturnSuccess) return status;\n  status = hostResponseHeader (0x21, lun, 0);',
-                                '  if (status != kIOReturnSuccess) { d2xq_console_text(status == kIOReturnTimeout ? "T " : "E "); return status; }\n  status = hostResponseHeader (0x21, lun, 0);', 1)
-            text = text.replace('  gRootDiagnostic.polls = state.polls;',
-                                '  d2xq_console_text("C3 ");\n  gRootDiagnostic.polls = state.polls;', 1)
+            counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
+                       ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
+                       ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
+            text = text.replace('  hostWrite (0x58, 1);', counter + '  hostWrite (0x58, 1);', 1)
             commands.write_text(text)
     poll = ufs_include / 'TransferPoll.h'
     if poll.is_file():
@@ -239,8 +228,6 @@ def main():
         if 'd2xq_console_text' not in text:
             if '    ++state.polls;' not in text:
                 sys.exit('poll anchor missing')
-            text = text.replace('    ++state.polls;',
-                                '    ++state.polls;\n    if (state.polls < 10) d2xq_console_text(".");\n    if ((state.polls % 100) == 0) d2xq_console_text(".");\n    if (state.polls > 500) return UfsTransferEnd::Timeout;', 1)
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             poll.write_text(text)
 
@@ -254,9 +241,9 @@ def main():
         text = text.replace('200000', '20000').replace('500000', '50000')
         if header_name == 'RootCommands.h':
             text = text.replace('  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);',
-                                '  d2xq_console_text("C4 ");\n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
+                                '  \n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
             text = text.replace('  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);',
-                                '  d2xq_console_text("C5 ");\n  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);', 1)
+                                '  \n  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);', 1)
         else:
             text = text.replace('    IOSleep (10);', '    d2xq_console_text("T ");\n    IOSleep (10);', 1)
             text = text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
