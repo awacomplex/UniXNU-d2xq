@@ -256,6 +256,16 @@ def main():
                     '  }')
             if busy in text:
                 text = text.replace(busy, '  if (read32 (gHost.hc, 0x58) != 0) { write32 (gHost.hc, 0x58, 0); }', 1)
+            sub_fatal = ('  if (read32 (gHost.hc, 0x20) & kUfsFatalStatus) {\n'
+                         '    gHost.poisoned = true;\n'
+                         '    gHost.ready = false;\n'
+                         '    return recordTransport (kIOReturnIOError, *ocs);\n'
+                         '  }')
+            if sub_fatal in text:
+                text = text.replace(sub_fatal, '  write32 (gHost.hc, 0x20, 0xffffffffU);', 1)
+            poisoned = '  if (gHost.poisoned) return kIOReturnNotReady;'
+            if poisoned in text:
+                text = text.replace(poisoned, '  gHost.poisoned = false;', 1)
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
