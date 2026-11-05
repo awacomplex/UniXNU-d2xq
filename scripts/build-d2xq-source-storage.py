@@ -173,31 +173,10 @@ def main():
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
-    ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
-                                'static inline void d2xq_nodelay (uint32_t) { }\nclass NativeUfs : public IOService {', 1)
-    ufs_text = ufs_text.replace('IODelay (', 'd2xq_nodelay (')
-    ufs_text = ufs_text.replace('attempt < 20', 'attempt < 1')
-    ufs_text = ufs_text.replace('    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));',
-                                '    d2xq_console_text("B ");\n    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));', 1)
-    tur = '  for (unsigned attempt = 0; attempt < 1; attempt++) {'
-    if tur not in ufs_text:
-        sys.exit('TUR loop anchor missing')
-    early = ('  gHost.ready = true;\n'
-             '  gHost.rootBlocks = 0x0B90C00ULL;\n'
-             '  d2xq_console_text("B ");\n'
-             '  return true;\n')
-    ufs_text = ufs_text.replace(tur, early + tur, 1)
-    cap_start = ufs_text.find('      uint8_t capacity[10] = { 0x25 };')
-    cap_end = ufs_text.find('      gHost.ready = true;')
-    if cap_start < 0 or cap_end < 0 or cap_end < cap_start:
-        sys.exit('capacity section anchor missing')
-    ufs_text = ufs_text[:cap_start] + '      gHost.rootBlocks = 0x0B90C00ULL;\n' + ufs_text[cap_end:]
-    ufs_text = ufs_text.replace('  if (hostNop () != kIOReturnSuccess) {',
-                                '  d2xq_console_text("N1 ");\n  if (hostNop () != kIOReturnSuccess) {', 1)
-    if '  if ((power & 0xff) != 0x11) {' in ufs_text:
-        ufs_text = ufs_text.replace('  if ((power & 0xff) != 0x11) {', '  if (false) {', 1)
-    ufs_text = ufs_text.replace('  uint32_t power = 0;',
-                                '  d2xq_console_text("N2 ");\n  uint32_t power = 0;', 1)
+    ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
+    if '      if (!runtimeQueueStart (why)) {' in ufs_text:
+        ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
+                                    '      if (false && !runtimeQueueStart (why)) {', 1)
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
@@ -224,96 +203,24 @@ def main():
                                 '#include <IOKit/IOLib.h>\nextern "C" void d2xq_console_text(const char *);', 1)
             if 'extern "C" void d2xq_console_text' not in text:
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
-            if 'IODelay (' in text:
-                text = text.replace('struct HardwareTransferPort {',
-                                    'static inline void d2xq_nodelay (uint32_t) { }\nstruct HardwareTransferPort {', 1)
-                text = text.replace('IODelay (', 'd2xq_nodelay (')
+            text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
+            text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
+            text = text.replace('void delay () { IODelay (2); }',
+                                'void delay () { }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
-                                'bool expired () { static uint32_t calls; calls++; return calls > 100; }', 1)
-            anchor_text = ('  if (gHost.poisoned) return false;\n'
-                           '  // Check before touching the command/response area, not just before ringing.\n'
-                           '  if (read32 (gHost.hc, 0x58) != 0) {')
-            if anchor_text not in text:
-                sys.exit('hostClearUcd anchor missing')
-            text = text.replace(anchor_text,
-                                '  gHost.poisoned = false;\n'
-                                '  if (read32 (gHost.hc, 0x58) != 0) {\n'
-                                '    write32 (gHost.hc, 0x58, 0);\n'
-                                '    for (unsigned d2xq_wait = 0; d2xq_wait < 200000 && read32 (gHost.hc, 0x58) != 0; d2xq_wait++) { d2xq_nodelay (1); }\n'
-                                '  }\n'
-                                '  // Check before touching the command/response area, not just before ringing.\n'
-                                '  if (read32 (gHost.hc, 0x58) != 0) {', 1)
-            fatal = ('  if (read32 (gHost.hc, 0x20) & kUfsFatalStatus) {\n'
-                     '    gHost.poisoned = true;\n'
-                     '    gHost.ready = false;\n'
-                     '    recordTransport (kIOReturnIOError, 15);\n'
-                     '    return false;\n'
-                     '  }')
-            if fatal in text:
-                text = text.replace(fatal, '  write32 (gHost.hc, 0x20, 0xffffffffU);', 1)
-            clear = '  if (!hostClearUcd ()) return kIOReturnNotReady;'
-            if clear in text:
-                text = text.replace(clear, '  if (!hostClearUcd ()) { d2xq_console_text("X "); return kIOReturnNotReady; }', 1)
-            stuck = ('  if (read32 (gHost.hc, 0x58) != 0) {\n'
-                     '    gHost.poisoned = true;\n'
-                     '    gHost.ready = false;\n'
-                     '    recordTransport (kIOReturnBusy, 15);\n'
-                     '    return false;\n'
-                     '  }')
-            if stuck in text:
-                text = text.replace(stuck, '  if (read32 (gHost.hc, 0x58) != 0) { write32 (gHost.hc, 0x58, 0); }', 1)
-            busy = ('  if (read32 (gHost.hc, 0x58) != 0) {\n'
-                    '    gHost.poisoned = true;\n'
-                    '    gHost.ready = false;\n'
-                    '    return recordTransport (kIOReturnBusy, *ocs);\n'
-                    '  }')
-            if busy in text:
-                text = text.replace(busy, '  if (read32 (gHost.hc, 0x58) != 0) { write32 (gHost.hc, 0x58, 0); }', 1)
-            sub_fatal = ('  if (read32 (gHost.hc, 0x20) & kUfsFatalStatus) {\n'
-                         '    gHost.poisoned = true;\n'
-                         '    gHost.ready = false;\n'
-                         '    return recordTransport (kIOReturnIOError, *ocs);\n'
-                         '  }')
-            if sub_fatal in text:
-                text = text.replace(sub_fatal, '  write32 (gHost.hc, 0x20, 0xffffffffU);', 1)
-            poisoned = '  if (gHost.poisoned) return kIOReturnNotReady;'
-            if poisoned in text:
-                text = text.replace(poisoned, '  gHost.poisoned = false;', 1)
-            marks = [
-                ('(dataBytes ? !direction : direction)) return kIOReturnBadArgument;',
-                 '(dataBytes ? !direction : direction)) { d2xq_console_text("V "); return kIOReturnBadArgument; }'),
-                ('    return kIOReturnNotPermitted;\n  }',
-                 '    d2xq_console_text("R "); return kIOReturnNotPermitted;\n  }'),
-                ('(dataBytes ? (direction != 1 && direction != 2) : direction != 0)) return kIOReturnBadArgument;',
-                 '(dataBytes ? (direction != 1 && direction != 2) : direction != 0)) { d2xq_console_text("V2 "); return kIOReturnBadArgument; }'),
-                ('  if (status != kIOReturnSuccess) return status;\n  status = hostResponseHeader (0x21, lun, 0);',
-                 '  if (status != kIOReturnSuccess) { d2xq_console_text("S "); return status; }\n  status = hostResponseHeader (0x21, lun, 0);'),
-                ('  status = hostResponseHeader (0x21, lun, 0);\n  if (status != kIOReturnSuccess) return status;',
-                 '  status = hostResponseHeader (0x21, lun, 0);\n  if (status != kIOReturnSuccess) { d2xq_console_text("E "); return status; }'),
-            ]
-            for a, b in marks:
-                if a in text:
-                    text = text.replace(a, b, 1)
-                else:
-                    sys.exit('mark anchor missing: ' + a[:50])
-            timeout_block = ('  if (end != UfsTransferEnd::Completed) {\n'
-                              '    // No cancel/reset/retry: the controller may still own the buffer, even\n')
-            if timeout_block in text:
-                text = text.replace(timeout_block,
-                                    '  if (end != UfsTransferEnd::Completed) {\n'
-                                    '    d2xq_console_text("T0 ");\n'
-                                    '    // No cancel/reset/retry: the controller may still own the buffer, even\n', 1)
-            final_ret = '  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);'
-            if final_ret in text:
-                wrap = ('  { char d2xq_o[3] = { \'O\', char ((*ocs) < 10 ? 48 + (*ocs) : 65 + (*ocs) - 10), 0 };'
-                        ' d2xq_console_text(d2xq_o); d2xq_console_text(" "); }\n' + final_ret)
-                text = text.replace(final_ret, wrap, 1)
-            counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
-                       ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
-                       ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
-            text = text.replace('  hostWrite (0x58, 1);', counter + '  hostWrite (0x58, 1);', 1)
+                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
+            text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
+                                '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
+            text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
+                                '  { unsigned v = ((unsigned (rsp[6]) << 8) | rsp[7]) & 0xffU; char h[2] = { char (v < 10 ? 48 + v : 65 + v - 10), 0 }; d2xq_console_text("Q"); d2xq_console_text(h); d2xq_console_text(" "); }\n  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];', 1)
+            text = text.replace('  IOReturn result = *scsiStatus == 0 ? kIOReturnSuccess : kIOReturnNotReady;',
+                                '  IOReturn result = *scsiStatus == 0 ? kIOReturnSuccess : kIOReturnNotReady;\n  d2xq_console_text(result == kIOReturnSuccess ? "G " : result == kIOReturnNotReady ? "N " : "E ");', 1)
+            text = text.replace('  if (status != kIOReturnSuccess) return status;\n  status = hostResponseHeader (0x21, lun, 0);',
+                                '  if (status != kIOReturnSuccess) { d2xq_console_text(status == kIOReturnTimeout ? "T " : "E "); return status; }\n  status = hostResponseHeader (0x21, lun, 0);', 1)
+            text = text.replace('  gRootDiagnostic.polls = state.polls;',
+                                '  d2xq_console_text("C3 ");\n  gRootDiagnostic.polls = state.polls;', 1)
             commands.write_text(text)
     poll = ufs_include / 'TransferPoll.h'
     if poll.is_file():
@@ -321,6 +228,8 @@ def main():
         if 'd2xq_console_text' not in text:
             if '    ++state.polls;' not in text:
                 sys.exit('poll anchor missing')
+            text = text.replace('    ++state.polls;',
+                                '    ++state.polls;\n    if (state.polls < 10) d2xq_console_text(".");\n    if ((state.polls % 100) == 0) d2xq_console_text(".");\n    if (state.polls > 500) return UfsTransferEnd::Timeout;', 1)
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             poll.write_text(text)
 
@@ -334,9 +243,9 @@ def main():
         text = text.replace('200000', '20000').replace('500000', '50000')
         if header_name == 'RootCommands.h':
             text = text.replace('  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);',
-                                '  \n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
+                                '  d2xq_console_text("C4 ");\n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
             text = text.replace('  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);',
-                                '  \n  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);', 1)
+                                '  d2xq_console_text("C5 ");\n  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);', 1)
         else:
             text = text.replace('    IOSleep (10);', '    d2xq_console_text("T ");\n    IOSleep (10);', 1)
             text = text.replace('panic ("NATIVE_UFS root check: bring-up failed: %s", why);',
@@ -350,12 +259,6 @@ def main():
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {',
                                 '  d2xq_console_text("G1 ");\n  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {', 1)
-            if '  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {' not in text:
-                sys.exit('entries read anchor missing')
-            entry_read = ('  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {\n'
-                          '    *why = "GPT entries read";\n'
-                          '    return false;\n'
-                          '  }')
             loop_read = ('  { IOReturn er = kIOReturnSuccess;\n'
                          '    for (uint32_t bi = 0; bi < blocks && er == kIOReturnSuccess; bi++) {\n'
                          '      er = hostRead4k (0, entriesLba + bi, 1, gScratch + bi * 4096);\n'
@@ -364,8 +267,6 @@ def main():
                          '      *why = "GPT entries read";\n'
                          '      return false;\n'
                          '    } }')
-            if entry_read not in text:
-                sys.exit('entries block text mismatch')
             text = text.replace('  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {',
                                 '  d2xq_console_text("G2 ");\n' + loop_read + '\n  if (false) {', 1)
             text = text.replace('  static const char wanted[] = "userdata";',
