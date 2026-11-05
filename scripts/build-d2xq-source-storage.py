@@ -191,18 +191,15 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = ('    { uint64_t wlba = layout->userdataLast - 16;\n'
-             '      uint8_t *wbuf = (uint8_t *) gHost.virt + kDataOffset;\n''      for (unsigned wi = 0; wi < 4096; wi++) wbuf[wi] = (uint8_t) (wi * 7 + 0x5A);\n'
-             '      uint8_t wcdb[10] = { 0x2A, 0, uint8_t (wlba >> 24), uint8_t (wlba >> 16), uint8_t (wlba >> 8), uint8_t (wlba),\n'
-             '                           0, 0, 1, 0 };\n'
-             '      uint32_t wscsi = 0;\n'
-             '      IOReturn wr = hostScsiDir (0, wcdb, 10, 1, 4096, 20000, &wscsi);\n'
-             '      uint8_t pat0 = (uint8_t) 0x5A, patf = (uint8_t) ((4095 * 7 + 0x5A) & 0xff);\n'
-             '      for (unsigned wi = 0; wi < 4096; wi++) gScratch[wi] = 0;\n'
-             '      IOReturn rd = hostRead4k (0, wlba, 1, gScratch);\n'
-             '      unsigned ok = (gScratch[0] == pat0 && gScratch[4095] == patf) ? 1U : 0U;\n'
-             '      panic ("UFS write test lba=%llx\\nwr=%x wscsi=%04x rd=%x ok=%u\\nb0=%02x bf=%02x",\n'
-             '        wlba, wr, wscsi, rd, ok, gScratch[0], gScratch[4095]); }\n')
+    probe = ('    { hostRead4k (0, 1, 1, gScratch);\n'
+             '      uint64_t my = (uint64_t) le32 (gScratch + 24) | ((uint64_t) le32 (gScratch + 28) << 32);\n'
+             '      uint64_t alt = (uint64_t) le32 (gScratch + 32) | ((uint64_t) le32 (gScratch + 36) << 32);\n'
+             '      uint64_t fu = (uint64_t) le32 (gScratch + 40) | ((uint64_t) le32 (gScratch + 44) << 32);\n'
+             '      uint64_t lu = (uint64_t) le32 (gScratch + 48) | ((uint64_t) le32 (gScratch + 52) << 32);\n'
+             '      uint64_t el = (uint64_t) le32 (gScratch + 72) | ((uint64_t) le32 (gScratch + 76) << 32);\n'
+             '      uint32_t cnt = le32 (gScratch + 80);\n'
+             '      panic ("GPT my=%llx alt=%llx first=%llx last=%llx\\nentries=%llx cnt=%u userdata=%llx..%llx",\n'
+             '        my, alt, fu, lu, el, cnt, layout->userdataFirst, layout->userdataLast); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
