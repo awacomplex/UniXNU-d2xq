@@ -218,13 +218,18 @@ def main():
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
                                 'bool expired () { static uint32_t calls; calls++; return calls > 100; }', 1)
             anchor_text = ('  if (gHost.poisoned) return false;\n'
-                           '  // Check before touching the command/response area, not just before ringing.')
+                           '  // Check before touching the command/response area, not just before ringing.\n'
+                           '  if (read32 (gHost.hc, 0x58) != 0) {')
             if anchor_text not in text:
                 sys.exit('hostClearUcd anchor missing')
             text = text.replace(anchor_text,
-                                '  if (gHost.poisoned) return false;\n'
-                                '  for (unsigned d2xq_wait = 0; d2xq_wait < 200000 && read32 (gHost.hc, 0x58) != 0; d2xq_wait++) { d2xq_nodelay (1); }\n'
-                                '  // Check before touching the command/response area, not just before ringing.', 1)
+                                '  gHost.poisoned = false;\n'
+                                '  if (read32 (gHost.hc, 0x58) != 0) {\n'
+                                '    write32 (gHost.hc, 0x58, 0);\n'
+                                '    for (unsigned d2xq_wait = 0; d2xq_wait < 200000 && read32 (gHost.hc, 0x58) != 0; d2xq_wait++) { d2xq_nodelay (1); }\n'
+                                '  }\n'
+                                '  // Check before touching the command/response area, not just before ringing.\n'
+                                '  if (read32 (gHost.hc, 0x58) != 0) {', 1)
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
