@@ -177,6 +177,8 @@ def main():
                                 'static inline void d2xq_nodelay (uint32_t) { }\nclass NativeUfs : public IOService {', 1)
     ufs_text = ufs_text.replace('IODelay (', 'd2xq_nodelay (')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 1')
+    ufs_text = ufs_text.replace('    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));',
+                                '    d2xq_console_text("B ");\n    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));', 1)
     cap_start = ufs_text.find('      uint8_t capacity[10] = { 0x25 };')
     cap_end = ufs_text.find('      gHost.ready = true;')
     if cap_start < 0 or cap_end < 0 or cap_end < cap_start:
