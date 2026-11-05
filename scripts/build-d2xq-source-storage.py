@@ -230,6 +230,17 @@ def main():
                                 '  }\n'
                                 '  // Check before touching the command/response area, not just before ringing.\n'
                                 '  if (read32 (gHost.hc, 0x58) != 0) {', 1)
+            fatal = ('  if (read32 (gHost.hc, 0x20) & kUfsFatalStatus) {\n'
+                     '    gHost.poisoned = true;\n'
+                     '    gHost.ready = false;\n'
+                     '    recordTransport (kIOReturnIOError, 15);\n'
+                     '    return false;\n'
+                     '  }')
+            if fatal in text:
+                text = text.replace(fatal, '  write32 (gHost.hc, 0x20, 0xffffffffU);', 1)
+            clear = '  if (!hostClearUcd ()) return kIOReturnNotReady;'
+            if clear in text:
+                text = text.replace(clear, '  if (!hostClearUcd ()) { d2xq_console_text("X "); return kIOReturnNotReady; }', 1)
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
