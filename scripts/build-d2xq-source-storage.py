@@ -205,7 +205,7 @@ def main():
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
             text = text.replace('void delay () { IODelay (2); }',
-                                'void delay () { for (volatile uint32_t spin = 0; spin < 200; spin++) { } }', 1)
+                                'void delay () { }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
                                 'bool expired () { static uint32_t calls; calls++; return calls > 100; }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
@@ -256,8 +256,24 @@ def main():
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {',
                                 '  d2xq_console_text("G1 ");\n  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {', 1)
+            if '  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {' not in text:
+                sys.exit('entries read anchor missing')
+            entry_read = ('  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {\n'
+                          '    *why = "GPT entries read";\n'
+                          '    return false;\n'
+                          '  }')
+            loop_read = ('  { IOReturn er = kIOReturnSuccess;\n'
+                         '    for (uint32_t bi = 0; bi < blocks && er == kIOReturnSuccess; bi++) {\n'
+                         '      er = hostRead4k (0, entriesLba + bi, 1, gScratch + bi * 4096);\n'
+                         '    }\n'
+                         '    if (er != kIOReturnSuccess) {\n'
+                         '      *why = "GPT entries read";\n'
+                         '      return false;\n'
+                         '    } }')
+            if entry_read not in text:
+                sys.exit('entries block text mismatch')
             text = text.replace('  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {',
-                                '  d2xq_console_text("G2 ");\n  if (hostRead4k (0, entriesLba, blocks, gScratch) != kIOReturnSuccess) {', 1)
+                                '  d2xq_console_text("G2 ");\n' + loop_read + '\n  if (false) {', 1)
             text = text.replace('  static const char wanted[] = "userdata";',
                                 '  d2xq_console_text("G3 ");\n  static const char wanted[] = "userdata";', 1)
             text = text.replace('  if (readManifest) {',
