@@ -192,12 +192,12 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = ('    { uint64_t wlba = layout->userdataLast - 16;\n'
-             '      for (unsigned wi = 0; wi < 4096; wi++) gScratch[wi] = (uint8_t) (wi * 7 + 0x5A);\n'
+             '      uint8_t *wbuf = (uint8_t *) gHost.virt + kDataOffset;\n''      for (unsigned wi = 0; wi < 4096; wi++) wbuf[wi] = (uint8_t) (wi * 7 + 0x5A);\n'
              '      uint8_t wcdb[10] = { 0x2A, 0, uint8_t (wlba >> 24), uint8_t (wlba >> 16), uint8_t (wlba >> 8), uint8_t (wlba),\n'
              '                           0, 0, 1, 0 };\n'
              '      uint32_t wscsi = 0;\n'
              '      IOReturn wr = hostScsiDir (0, wcdb, 10, 1, 4096, 20000, &wscsi);\n'
-             '      uint8_t pat0 = gScratch[0], patf = gScratch[4095];\n'
+             '      uint8_t pat0 = (uint8_t) 0x5A, patf = (uint8_t) ((4095 * 7 + 0x5A) & 0xff);\n'
              '      for (unsigned wi = 0; wi < 4096; wi++) gScratch[wi] = 0;\n'
              '      IOReturn rd = hostRead4k (0, wlba, 1, gScratch);\n'
              '      unsigned ok = (gScratch[0] == pat0 && gScratch[4095] == patf) ? 1U : 0U;\n'
