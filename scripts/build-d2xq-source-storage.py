@@ -202,11 +202,7 @@ def main():
             text = text.replace('#include <IOKit/IOLib.h>',
                                 '#include <IOKit/IOLib.h>\nextern "C" void d2xq_console_text(const char *);', 1)
             if 'extern "C" void d2xq_console_text' not in text:
-                if 'static uint8_t gScratch[kDataMax];' not in text:
-                sys.exit('gScratch anchor missing')
-            text = text.replace('static uint8_t gScratch[kDataMax];',
-                                'static uint8_t gScratch[16384];', 1)
-            text = 'extern "C" void d2xq_console_text(const char *);\n' + text
+                text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
@@ -259,6 +255,8 @@ def main():
     layout_hdr = ufs_include / 'RootLayout.h'
     if layout_hdr.is_file():
         text = layout_hdr.read_text()
+        if 'static uint8_t gScratch[kDataMax];' in text:
+            text = text.replace('static uint8_t gScratch[kDataMax];', 'static uint8_t gScratch[16384];', 1)
         if 'd2xq_console_text' not in text:
             text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  if (hostRead4k (0, 1, 1, gScratch) != kIOReturnSuccess) {',
