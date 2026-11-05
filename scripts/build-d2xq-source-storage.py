@@ -191,22 +191,13 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = ('    { uint32_t recIdx = 0xffffffffU; uint64_t recFirst = 0;\n'
-             '      uint32_t eb = (layout->gptEntryCount * 128 + 4095) / 4096;\n'
-             '      for (uint32_t bi = 0; bi < eb && bi < 4; bi++) {\n'
-             '        hostRead4k (0, layout->gptEntriesLba + bi, 1, gScratch);\n'
-             '        for (uint32_t ei = 0; ei < 32; ei++) {\n'
-             '          const uint8_t *e = gScratch + ei * 128;\n'
-             '          static const char want[] = "recovery";\n'
-             '          bool m = true;\n'
-             '          for (unsigned c = 0; c < 8; c++) if (e[56 + 2 * c] != (uint8_t) want[c] || e[57 + 2 * c]) { m = false; break; }\n'
-             '          if (m) { recIdx = bi * 32 + ei; recFirst = le64 (e + 32); break; }\n'
-             '        }\n'
-             '        if (recIdx != 0xffffffffU) break;\n'
-             '      }\n'
-             '      hostRead4k (0, 0x3B90BEA, 1, gScratch);\n'
-             '      uint8_t wb = gScratch[0];\n'
-             '      panic ("rec idx=%u first=%llx wtest=%02x", recIdx, recFirst, wb); }\n')
+    probe = ('    { hostRead4k (0, 0x21F400, 1, gScratch);\n'
+             '      uint32_t u0 = le32 (gScratch);\n'
+             '      hostRead4k (0, 0x2BE00, 1, gScratch);\n'
+             '      uint32_t s0 = le32 (gScratch);\n'
+             '      hostRead4k (0, 0x24F13, 1, gScratch);\n'
+             '      uint32_t r0 = le32 (gScratch);\n'
+             '      panic ("ud=%08x sys=%08x rec=%08x", u0, s0, r0); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
