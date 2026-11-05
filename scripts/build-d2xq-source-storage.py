@@ -193,10 +193,10 @@ def main():
     end += len('layout->manifestStatus, layout->windows);')
     probe = ('    { hostRead4k (0, layout->userdataFirst, 1, gScratch);\n'
              '      uint32_t a0 = le32 (gScratch + 0);\n'
-             '      hostRead4k (0, 0x179712, 1, gScratch);\n'
-             '      uint32_t s0 = le32 (gScratch + 0);\n'
-             '      uint32_t s1 = le32 (gScratch + 4);\n'
-             '      panic ("UD a=%08x sys=%08x %08x", a0, s0, s1); }\n')
+             '      hostRead4k (0, 0x151315, 1, gScratch);\n'
+             '      uint32_t r0 = le32 (gScratch + 0);\n'
+             '      uint32_t r1 = le32 (gScratch + 4);\n'
+             '      panic ("UD a=%08x rec=%08x %08x", a0, r0, r1); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
