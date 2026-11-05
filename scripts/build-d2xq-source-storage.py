@@ -186,6 +186,19 @@ def main():
                  '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
     if old_probe in ufs_text:
         ufs_text = ufs_text.replace(old_probe, new_probe, 1)
+    begin = ufs_text.find('    panic ("NATIVE_UFS root check\\n"')
+    end = ufs_text.find('layout->manifestStatus, layout->windows);')
+    if begin < 0 or end < 0 or end < begin:
+        sys.exit('root check panic anchor missing')
+    end += len('layout->manifestStatus, layout->windows);')
+    probe = ('    { uint32_t ma = le32 (gScratch + 1024);\n'
+             '      uint64_t ba = (uint64_t) le32 (gScratch + 1060) | ((uint64_t) le32 (gScratch + 1064) << 32);\n'
+             '      hostRead4k (0, layout->userdataFirst / 8, 1, gScratch);\n'
+             '      uint32_t mb = le32 (gScratch + 1024);\n'
+             '      uint64_t bb = (uint64_t) le32 (gScratch + 1060) | ((uint64_t) le32 (gScratch + 1064) << 32);\n'
+             '      panic ("UFS addressing\\nA P=%llx magic=%08x blk=%llx\\nB P/8=%llx magic=%08x blk=%llx",\n'
+             '        layout->userdataFirst, ma, ba, layout->userdataFirst / 8, mb, bb); }\n')
+    ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     if '      if (!runtimeQueueStart (why)) {' in ufs_text:
