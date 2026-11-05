@@ -40,17 +40,6 @@ d2xq_rd_test(void)
 		}
 		map->release();
 	}
-	if (address != 0 && size != 0) {
-		IOMemoryDescriptor *memory = IOMemoryDescriptor::withPhysicalAddress(address, size, kIODirectionIn);
-		if (memory != nullptr) {
-			IOMemoryMap *mapping = memory->map(kIOMapAnywhere);
-			if (mapping != nullptr) {
-				first = *reinterpret_cast<volatile uint32_t *>(mapping->getVirtualAddress());
-				mapping->release();
-			}
-			memory->release();
-		}
-	}
 	panic("RD addr=%llx size=%llx first=%08x", address, size, first);
 }
 
@@ -81,6 +70,7 @@ extern "C" void native_source_storage_start(void)
 	if (!PE_parse_boot_argn("native-source-storage", &enabled, sizeof(enabled)) || enabled != 1 || attempted) {
 		return;
 	}
+	d2xq_console_text("V8 ");
 	int rdtest = 0;
 	PE_parse_boot_argn("d2xq-rdtest", &rdtest, sizeof(rdtest));
 	if (rdtest) {
