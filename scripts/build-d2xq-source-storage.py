@@ -298,6 +298,18 @@ def main():
                     text = text.replace(a, b, 1)
                 else:
                     sys.exit('mark anchor missing: ' + a[:50])
+            timeout_block = ('  if (end != UfsTransferEnd::Completed) {\n'
+                              '    // No cancel/reset/retry: the controller may still own the buffer, even\n')
+            if timeout_block in text:
+                text = text.replace(timeout_block,
+                                    '  if (end != UfsTransferEnd::Completed) {\n'
+                                    '    d2xq_console_text("T0 ");\n'
+                                    '    // No cancel/reset/retry: the controller may still own the buffer, even\n', 1)
+            final_ret = '  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);'
+            if final_ret in text:
+                wrap = ('  { char d2xq_o[3] = { \'O\', char ((*ocs) < 10 ? 48 + (*ocs) : 65 + (*ocs) - 10), 0 };'
+                        ' d2xq_console_text(d2xq_o); d2xq_console_text(" "); }\n' + final_ret)
+                text = text.replace(final_ret, wrap, 1)
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
