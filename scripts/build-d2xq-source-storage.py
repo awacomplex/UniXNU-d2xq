@@ -266,6 +266,23 @@ def main():
             poisoned = '  if (gHost.poisoned) return kIOReturnNotReady;'
             if poisoned in text:
                 text = text.replace(poisoned, '  gHost.poisoned = false;', 1)
+            marks = [
+                ('(dataBytes ? !direction : direction)) return kIOReturnBadArgument;',
+                 '(dataBytes ? !direction : direction)) { d2xq_console_text("V "); return kIOReturnBadArgument; }'),
+                ('    return kIOReturnNotPermitted;\n  }',
+                 '    d2xq_console_text("R "); return kIOReturnNotPermitted;\n  }'),
+                ('(dataBytes ? (direction != 1 && direction != 2) : direction != 0)) return kIOReturnBadArgument;',
+                 '(dataBytes ? (direction != 1 && direction != 2) : direction != 0)) { d2xq_console_text("V2 "); return kIOReturnBadArgument; }'),
+                ('  if (status != kIOReturnSuccess) return status;\n  status = hostResponseHeader (0x21, lun, 0);',
+                 '  if (status != kIOReturnSuccess) { d2xq_console_text("S "); return status; }\n  status = hostResponseHeader (0x21, lun, 0);'),
+                ('  status = hostResponseHeader (0x21, lun, 0);\n  if (status != kIOReturnSuccess) return status;',
+                 '  status = hostResponseHeader (0x21, lun, 0);\n  if (status != kIOReturnSuccess) { d2xq_console_text("E "); return status; }'),
+            ]
+            for a, b in marks:
+                if a in text:
+                    text = text.replace(a, b, 1)
+                else:
+                    sys.exit('mark anchor missing: ' + a[:50])
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
