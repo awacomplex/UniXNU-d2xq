@@ -179,6 +179,14 @@ def main():
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 1')
     ufs_text = ufs_text.replace('    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));',
                                 '    d2xq_console_text("B ");\n    RootLayout *layout = static_cast<RootLayout *> (IOMalloc (sizeof (RootLayout)));', 1)
+    tur = '    for (unsigned attempt = 0; attempt < 1; attempt++) {'
+    if tur not in ufs_text:
+        sys.exit('TUR loop anchor missing')
+    early = ('    gHost.ready = true;\n'
+             '    gHost.rootBlocks = 0x0B90C00ULL;\n'
+             '    d2xq_console_text("B ");\n'
+             '    return true;\n')
+    ufs_text = ufs_text.replace(tur, early + tur, 1)
     cap_start = ufs_text.find('      uint8_t capacity[10] = { 0x25 };')
     cap_end = ufs_text.find('      gHost.ready = true;')
     if cap_start < 0 or cap_end < 0 or cap_end < cap_start:
