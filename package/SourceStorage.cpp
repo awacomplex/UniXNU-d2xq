@@ -26,6 +26,36 @@ extern "C" volatile int d2xq_ufs_stage = -1;
 extern "C" void d2xq_console_text(const char *);
 
 static void
+d2xq_rd_test(void)
+{
+	IORegistryEntry *map = IORegistryEntry::fromPath("/chosen/memory-map", gIODTPlane);
+	uint64_t address = 0, size = 0;
+	uint32_t first = 0;
+	if (map != nullptr) {
+		OSData *data = OSDynamicCast(OSData, map->getProperty("RAMDisk"));
+		if (data != nullptr && data->getLength() >= 16) {
+			const uint64_t *entry = static_cast<const uint64_t *>(data->getBytesNoCopy());
+			address = entry[0];
+			size = entry[1];
+		}
+		map->release();
+	}
+	if (address != 0 && size != 0) {
+		IOMemoryDescriptor *memory = IOMemoryDescriptor::withPhysicalAddress(address, size, kIODirectionIn);
+		if (memory != nullptr) {
+			IOMemoryMap *mapping = memory->map(kIOMapAnywhere);
+			if (mapping != nullptr) {
+				first = *reinterpret_cast<volatile uint32_t *>(mapping->getVirtualAddress());
+				mapping->release();
+			}
+			memory->release();
+		}
+	}
+	panic("RD addr=%llx size=%llx first=%08x", address, size, first);
+}
+
+
+static void
 d2xq_ufs_watchdog(void *, wait_result_t)
 {
 	IOSleep(20000);
@@ -50,6 +80,11 @@ extern "C" void native_source_storage_start(void)
 
 	if (!PE_parse_boot_argn("native-source-storage", &enabled, sizeof(enabled)) || enabled != 1 || attempted) {
 		return;
+	}
+	int rdtest = 0;
+	PE_parse_boot_argn("d2xq-rdtest", &rdtest, sizeof(rdtest));
+	if (rdtest) {
+		d2xq_rd_test();
 	}
 	attempted = true;
 	d2xq_console_text("V8 ");
