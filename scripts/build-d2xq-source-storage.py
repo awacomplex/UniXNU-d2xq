@@ -173,6 +173,9 @@ def main():
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
+    ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
+                                'static inline void d2xq_nodelay (uint32_t) { }\nclass NativeUfs : public IOService {', 1)
+    ufs_text = ufs_text.replace('IODelay (', 'd2xq_nodelay (')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
                                 'd2xq_console_text("FAIL ");\n    panic ("NATIVE_UFS bring-up failed: %s')
@@ -202,6 +205,10 @@ def main():
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
             text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
+            if 'IODelay (' in text:
+                text = text.replace('struct HardwareTransferPort {',
+                                    'static inline void d2xq_nodelay (uint32_t) { }\nstruct HardwareTransferPort {', 1)
+                text = text.replace('IODelay (', 'd2xq_nodelay (')
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
             text = text.replace('void delay () { IODelay (2); }',
