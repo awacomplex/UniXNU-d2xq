@@ -176,9 +176,11 @@ def main():
     ufs_text = ufs_text.replace('class NativeUfs : public IOService {',
                                 'static inline void d2xq_nodelay (uint32_t) { }\nclass NativeUfs : public IOService {', 1)
     ufs_text = ufs_text.replace('IODelay (', 'd2xq_nodelay (')
-    ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
+    ufs_text = ufs_text.replace('attempt < 20', 'attempt < 1')
     ufs_text = ufs_text.replace('  if (hostNop () != kIOReturnSuccess) {',
                                 '  d2xq_console_text("N1 ");\n  if (hostNop () != kIOReturnSuccess) {', 1)
+    if '  if ((power & 0xff) != 0x11) {' in ufs_text:
+        ufs_text = ufs_text.replace('  if ((power & 0xff) != 0x11) {', '  if (false) {', 1)
     ufs_text = ufs_text.replace('  uint32_t power = 0;',
                                 '  d2xq_console_text("N2 ");\n  uint32_t power = 0;', 1)
     ufs_text = ufs_text.replace('panic ("NATIVE_UFS bring-up failed: %s',
