@@ -172,6 +172,18 @@ def main():
     for number in (100, 101, 102, 103, 104, 105, 106, 107, 200, 205, 206, 207, 201, 202, 203, 204):
         ufs_text = ufs_text.replace(f'd2xq_ufs_stage = {number};',
                                     f'd2xq_ufs_stage = {number}; d2xq_console_text("H{number} ");')
+    old_probe = ('           "block0 magic %08x %08x ext4magic=%04x ext4blocks=%u\\n"\n'
+                 '           "manifest status=%u windows=%u",\n'
+                 '           layout->userdataFirst, layout->userdataLast, layout->magic0, layout->magic1,\n'
+                 '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
+    new_probe = ('           "d0 %08x %08x %08x %08x f2fs=%08x\\n"\n'
+                 '           "ext4magic=%04x ext4blocks=%u status=%u windows=%u",\n'
+                 '           layout->userdataFirst, layout->userdataLast,\n'
+                 '           le32 (gScratch), le32 (gScratch + 4), le32 (gScratch + 8), le32 (gScratch + 12),\n'
+                 '           le32 (gScratch + 1024),\n'
+                 '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
+    if old_probe in ufs_text:
+        ufs_text = ufs_text.replace(old_probe, new_probe, 1)
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     if '      if (!runtimeQueueStart (why)) {' in ufs_text:
