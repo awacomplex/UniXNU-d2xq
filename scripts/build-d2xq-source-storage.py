@@ -192,13 +192,11 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = ('    { hostRead4k (0, layout->userdataFirst, 1, gScratch);\n'
-             '      uint8_t m0 = gScratch[0], m1 = gScratch[1], m2 = gScratch[2], m3 = gScratch[3];\n'
-             '      uint8_t m4 = gScratch[4], m5 = gScratch[5], m6 = gScratch[6], m7 = gScratch[7];\n'
-             '      uint64_t total = (uint64_t) le32 (gScratch + 16) | ((uint64_t) le32 (gScratch + 20) << 32);\n'
-             '      hostRead4k (0, layout->userdataFirst + 256, 1, gScratch);\n'
-             '      uint32_t apfs = le32 (gScratch + 32);\n'
-             '      panic ("UD %c%c%c%c%c%c%c%c tot=%llx apfs=%08x",\n'
-             '        m0, m1, m2, m3, m4, m5, m6, m7, total, apfs); }\n')
+             '      uint32_t a0 = le32 (gScratch + 0);\n'
+             '      hostRead4k (0, layout->userdataFirst / 8, 1, gScratch);\n'
+             '      uint32_t b0 = le32 (gScratch + 0);\n'
+             '      uint64_t bt = (uint64_t) le32 (gScratch + 16) | ((uint64_t) le32 (gScratch + 20) << 32);\n'
+             '      panic ("UD a=%08x b=%08x btot=%llx", a0, b0, bt); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
