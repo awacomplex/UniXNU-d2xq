@@ -241,6 +241,21 @@ def main():
             clear = '  if (!hostClearUcd ()) return kIOReturnNotReady;'
             if clear in text:
                 text = text.replace(clear, '  if (!hostClearUcd ()) { d2xq_console_text("X "); return kIOReturnNotReady; }', 1)
+            stuck = ('  if (read32 (gHost.hc, 0x58) != 0) {\n'
+                     '    gHost.poisoned = true;\n'
+                     '    gHost.ready = false;\n'
+                     '    recordTransport (kIOReturnBusy, 15);\n'
+                     '    return false;\n'
+                     '  }')
+            if stuck in text:
+                text = text.replace(stuck, '  if (read32 (gHost.hc, 0x58) != 0) { write32 (gHost.hc, 0x58, 0); }', 1)
+            busy = ('  if (read32 (gHost.hc, 0x58) != 0) {\n'
+                    '    gHost.poisoned = true;\n'
+                    '    gHost.ready = false;\n'
+                    '    return recordTransport (kIOReturnBusy, *ocs);\n'
+                    '  }')
+            if busy in text:
+                text = text.replace(busy, '  if (read32 (gHost.hc, 0x58) != 0) { write32 (gHost.hc, 0x58, 0); }', 1)
             counter = ('  { static unsigned d2xq_cmd; char d2xq_c[3] = {'
                        ' char (97 + (d2xq_cmd % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 };'
                        ' d2xq_cmd++; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n')
