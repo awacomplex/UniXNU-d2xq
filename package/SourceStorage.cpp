@@ -52,6 +52,7 @@ extern "C" void native_source_storage_start(void)
 		return;
 	}
 	attempted = true;
+	d2xq_console_text("V8 ");
 
 	d2xq_ufs_stage = 1; d2xq_console_text("S1 ");
 	thread_t watchdog = nullptr;
