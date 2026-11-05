@@ -205,9 +205,9 @@ def main():
             if 'bool expired () { return mach_absolute_time () >= deadline; }' not in text:
                 sys.exit('expired anchor missing')
             text = text.replace('void delay () { IODelay (2); }',
-                                'void delay () { for (volatile uint32_t spin = 0; spin < 20000; spin++) { } }', 1)
+                                'void delay () { for (volatile uint32_t spin = 0; spin < 200; spin++) { } }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
-                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
+                                'bool expired () { static uint32_t calls; calls++; return calls > 100; }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
