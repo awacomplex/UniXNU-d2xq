@@ -209,7 +209,8 @@ def main():
                                 '#include <IOKit/IOLib.h>\nextern "C" void d2xq_console_text(const char *);', 1)
             if 'extern "C" void d2xq_console_text' not in text:
                 text = 'extern "C" void d2xq_console_text(const char *);\n' + text
-            text = text.replace('  hostWrite (0x58, 1);', '  d2xq_console_text("C1 ");\n  hostWrite (0x58, 1);', 1)
+            text = text.replace('  hostWrite (0x58, 1);',
+                                '  { static unsigned d2xq_cmd; char d2xq_c[3] = { char (97 + (d2xq_cmd++ % 26)), char (48 + ((d2xq_cmd / 26) % 10)), 0 }; d2xq_console_text(d2xq_c); d2xq_console_text(" "); }\n  hostWrite (0x58, 1);', 1)
             text = text.replace('  UfsTransferPoll state;', '  d2xq_console_text("C2 ");\n  UfsTransferPoll state;', 1)
             if 'IODelay (' in text:
                 text = text.replace('struct HardwareTransferPort {',
