@@ -177,6 +177,11 @@ def main():
                                 'static inline void d2xq_nodelay (uint32_t) { }\nclass NativeUfs : public IOService {', 1)
     ufs_text = ufs_text.replace('IODelay (', 'd2xq_nodelay (')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 1')
+    cap_start = ufs_text.find('      uint8_t capacity[10] = { 0x25 };')
+    cap_end = ufs_text.find('      gHost.ready = true;')
+    if cap_start < 0 or cap_end < 0 or cap_end < cap_start:
+        sys.exit('capacity section anchor missing')
+    ufs_text = ufs_text[:cap_start] + '      gHost.rootBlocks = 0x0B90C00ULL;\n' + ufs_text[cap_end:]
     ufs_text = ufs_text.replace('  if (hostNop () != kIOReturnSuccess) {',
                                 '  d2xq_console_text("N1 ");\n  if (hostNop () != kIOReturnSuccess) {', 1)
     if '  if ((power & 0xff) != 0x11) {' in ufs_text:
