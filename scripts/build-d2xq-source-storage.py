@@ -213,7 +213,7 @@ def main():
              '        uint32_t st = 0;\n'
              '        IOReturn wr = hostScsiDir (0, cdb, 10, 1, 4096, 1900000, &st);\n'
              '        if (wr != kIOReturnSuccess || st != 0) panic ("ING w %llu wr=%x st=%04x ready=%u pois=%u", i, wr, st, gHost.ready ? 1U : 0U, gHost.poisoned ? 1U : 0U);\n'
-             '        for (volatile unsigned spin = 0; spin < 200000; spin++) { }\n'
+             '        for (volatile unsigned spin = 0; spin < 20000; spin++) { }\n'
              '      }\n'
              '      panic ("ING done %llu", chunkBlocks); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
@@ -256,7 +256,7 @@ def main():
             text = text.replace('void delay () { IODelay (2); }',
                                 'void delay () { }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
-                                'bool expired () { static uint32_t calls; calls++; return calls > 100000000U; }', 1)
+                                'bool expired () { static uint32_t calls; calls++; return calls > 4000000000U; }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
