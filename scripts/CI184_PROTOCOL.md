@@ -95,3 +95,20 @@ it, and resets the watchdog counter. `OKslot:counter R` is printed just before
 enabling the watchdog. A reset timeout panics with the watchdog registers.
 The watchdog sequence and whether MISC selects Samsung Download still need
 real-device verification before unattended batching.
+
+## CI185 reset revision (same ingest protocol)
+
+The 65-packet single-sequence Heimdall variant delivered the complete payload
+and metadata. Real-device repair slot 0 advanced the persistent repair state
+to 1 and rebooted back into XNU. Re-entry stopped at `repair sequence slot=0
+next=1 counter=7`. Thus slot 0 is verified and must not be replayed; the MISC
+`bootloader` request did not select Samsung Odin Download.
+
+CI185 replaces only the success reset hook with the same-device Samsung PON
+Download reason. It validates SPMI v5, EE0 ownership and Gen2 PON subtype,
+updates PMIC SID0:0x088f to `(old & 1) | 0x2a`, reads it back exactly, and then
+enables the already tested APSS watchdog. No MISC request is written by this
+revision. Hardware evidence, diagnostic markers and failure behavior are in
+`CI185_RESET.md`. All payload/counter formats and all ingest guards above stay
+the same. Automatic arrival in Odin Download requires a real-device test of
+repair slot 1 before batching.
