@@ -186,15 +186,26 @@ def main():
                  '           layout->ext4Magic, layout->ext4Blocks, layout->manifestStatus, layout->windows);')
     if old_probe in ufs_text:
         ufs_text = ufs_text.replace(old_probe, new_probe, 1)
+    # Rewrite old driver timeout constants before adding the checked probe.
+    # Applying broad digit replacements to the probe could corrupt metadata
+    # constants or a later hardware reset implementation.
+    ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     begin = ufs_text.find('    panic ("NATIVE_UFS root check\\n"')
     end = ufs_text.find('layout->manifestStatus, layout->windows);')
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = (ROOT / 'scripts/ci183-readonly-audit.inc').read_text()
+    probe = (ROOT / 'scripts/ci184-guarded-ingest.inc').read_text()
+    hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
+    if probe.count(hash_marker) != 1:
+        sys.exit('CI184 chunk hash table marker missing')
+    probe = probe.replace(hash_marker, (ROOT / 'scripts/ci184-chunk-hashes.inc').read_text(), 1)
+    reset_marker = '/* CI184_SUCCESS_HOOK */'
+    if probe.count(reset_marker) != 1:
+        sys.exit('CI184 success hook marker missing')
+    probe = probe.replace(reset_marker, (ROOT / 'scripts/ci184-reset-download.inc').read_text(), 1)
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
-    ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     if '      if (!runtimeQueueStart (why)) {' in ufs_text:
         ufs_text = ufs_text.replace('      if (!runtimeQueueStart (why)) {',
@@ -244,8 +255,8 @@ def main():
         if not header.is_file():
             continue
         text = header.read_text()
-        text = text.replace('200000', '20000').replace('500000', '50000')
         if header_name == 'RootCommands.h':
+            text = text.replace('200000', '20000').replace('500000', '50000')
             text = text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
             text = text.replace('if (read32 (gHost.hc, 0x58) != 0) {',
                                 'for (unsigned _dw = 0; _dw < 400000 && read32 (gHost.hc, 0x58) != 0; _dw++) { }\n  if (read32 (gHost.hc, 0x58) != 0) {')
