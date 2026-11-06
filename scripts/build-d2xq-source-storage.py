@@ -207,7 +207,7 @@ def main():
              '        uint32_t rst = 0;\n'
              '        IOReturn rr = hostScsiDir (0, rcdb, 10, 2, 4096, 1900000, &rst);\n'
              '        if (rr != kIOReturnSuccess || rst != 0) panic ("ING r %llu rr=%x st=%04x ready=%u pois=%u", i, rr, rst, gHost.ready ? 1U : 0U, gHost.poisoned ? 1U : 0U);\n'
-             '        for (unsigned k = 0; k < 4096; k++) dma[k] = gScratch[k];\n'
+             
              '        uint64_t lba = dst + i;\n'
              '        uint8_t cdb[10] = { 0x2A, 0, (uint8_t) (lba >> 24), (uint8_t) (lba >> 16), (uint8_t) (lba >> 8), (uint8_t) lba, 0, 0, 1, 0 };\n'
              '        uint32_t st = 0;\n'
