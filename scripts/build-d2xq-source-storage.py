@@ -226,8 +226,10 @@ def main():
              '      for (unsigned k = 0; k < 10; k++) gScratch[k] = (uint8_t) bm[k];\n'
              '      for (unsigned k = 0; k < 4096; k++) dma[k] = gScratch[k];\n'
              '      { uint64_t ml = 0x6513; uint8_t m2[10] = { 0x2A, 0, (uint8_t) (ml >> 24), (uint8_t) (ml >> 16), (uint8_t) (ml >> 8), (uint8_t) ml, 0, 0, 1, 0 }; uint32_t s3 = 0; hostScsiDir (0, m2, 10, 1, 4096, 1900000, &s3); }\n'
-             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16\\n\\t smc #0" ::: "x0", "memory");\n'
-             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16\\n\\t hvc #0" ::: "x0", "memory");\n'
+             '      d2xq_console_text("R ");\n'
+             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16; mov x1, #0; mov x2, #0; mov x3, #0\\n\\t hvc #0" ::: "x0", "x1", "x2", "x3", "memory");\n'
+             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16; mov x1, #0; mov x2, #0; mov x3, #0\\n\\t smc #0" ::: "x0", "x1", "x2", "x3", "memory");\n'
+             
              '      panic ("INGEST reset %llu/%llu", next, totalChunks); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
