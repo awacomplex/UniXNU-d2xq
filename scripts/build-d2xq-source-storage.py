@@ -191,13 +191,16 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = ('    { hostRead4k (0, 0x21F400, 1, gScratch);\n'
-             '      uint32_t u0 = le32 (gScratch);\n'
-             '      hostRead4k (0, 0x2BE00, 1, gScratch);\n'
-             '      uint32_t s0 = le32 (gScratch);\n'
-             '      hostRead4k (0, 0x24F13, 1, gScratch);\n'
-             '      uint32_t r0 = le32 (gScratch);\n'
-             '      panic ("ud=%08x sys=%08x rec=%08x", u0, s0, r0); }\n')
+    probe = ('    { hostRead4k (0, 0x24F13, 1, gScratch);\n'
+             '      uint32_t src0 = le32 (gScratch);\n'
+             '      uint8_t *wbuf = (uint8_t *) gHost.virt + kDataOffset;\n'
+             '      for (unsigned i = 0; i < 4096; i++) wbuf[i] = gScratch[i];\n'
+             '      uint8_t wcdb[10] = { 0x2A, 0, 0, 0x21, 0xF4, 0x00, 0, 0, 1, 0 };\n'
+             '      uint32_t wscsi = 0;\n'
+             '      IOReturn wr = hostScsiDir (0, wcdb, 10, 1, 4096, 20000, &wscsi);\n'
+             '      hostRead4k (0, 0x21F400, 1, gScratch);\n'
+             '      uint32_t dst0 = le32 (gScratch);\n'
+             '      panic ("cp src=%08x wr=%x ws=%04x dst=%08x", src0, wr, wscsi, dst0); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
