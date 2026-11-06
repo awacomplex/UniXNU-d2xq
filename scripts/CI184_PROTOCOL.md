@@ -36,33 +36,51 @@ All integers are little endian.  The wrapped file is exactly 67,112,960 bytes.
 | 96 | 32 bytes | SHA256 of bytes 0..95 |
 | 128 | 3968 bytes | all zero |
 
-Repair mode requires counter 7 and slot below 7.  It preserves the counter.
-Append mode requires counter equal to slot.  The only completed retry allowed
-is counter=slot+1 with a trusted counter extension and a matching target hash;
-that path never rewrites data.  Slot 7 fully verifies windows 0..6 before it
-can write or advance the counter.  Append slots 8 onward require a trusted
-counter extension, preventing a legacy unverified counter from skipping ahead.
+Repair mode requires counter index 7 and the exact next repair slot, starting
+at zero.  Each verified repair persistently advances its repair progress while
+keeping index 7.  A stale repair trailer is rejected before source hashing or
+any write/reset, even when two slots contain identical all-zero data.
+
+Append mode requires counter equal to slot.  A completed append retry with
+counter=slot+1 and a trusted extension immediately leaves `CI184 ALREADY` on
+screen, before any data readback, flush, write or reset.  The host must stop and
+reconcile that result instead of interpreting another USB reset as completion.
+Slot 7 accepts either the exact legacy index-seven state or completed repair
+progress 7; intermediate repair progress 1..6 is rejected.  It fully verifies
+windows 0..6 before writing or advancing the index.  Append slots 8 onward
+require the trusted `D2SAFE84` counter extension.
 
 ## Trusted counter block
 
-The first append writes a complete zero-filled 4 KiB block with these fields:
+Verified repair and append operations write a complete zero-filled 4 KiB block
+with these fields:
 
 | Offset | Type | Meaning |
 | --- | --- | --- |
 | 0 | 4 bytes | `D2XQ` |
-| 8 | u64 | next slot index |
-| 16 | 8 bytes | `D2SAFE84` |
+| 4 | u32 | repair: next repair slot 1..7; append: zero |
+| 8 | u64 | repair: index stays 7; append: next image slot 8..140 |
+| 16 | 8 bytes | repair: `D2REPR84`; append: `D2SAFE84` |
 | 24 | 32 bytes | raw pinned original image SHA256 |
 | 56 | u64 | bitwise complement of index |
 | 64 | 32 bytes | SHA256 of counter bytes 0..63 |
 | 96 | 4000 bytes | all zero |
 
+`D2REPR84` is accepted only with index 7 and repair progress 1..7.
+`D2SAFE84` is accepted only with index 8..140 and a zero repair field.  Both
+require the pinned image hash, index complement, checksum and zero reserved
+bytes.  The only accepted legacy state is index 7, a zero repair field and
+all-zero bytes 16..4095; it represents next repair slot zero.  Unknown nonzero
+extensions are rejected.
+
 The source is fully hashed before target writes.  The existing target is fully
 hashed and matching data is reused.  Written targets are flushed with
 SYNCHRONIZE CACHE(10) and fully read back.  Matching targets are flushed too,
 covering data left in a device write cache by an interrupted attempt.  Only
-then may append commit the next counter; it flushes and compares all 4 KiB on
-readback.  The `CI184_SUCCESS_HOOK` is reached after all checks have passed.
+then may repair commit its next repair slot, or append commit the next image
+index.  That commit is flushed and all 4 KiB are compared on readback.  The
+`CI184_SUCCESS_HOOK` is reached after all checks and that durable progress
+commit have passed.  Repeated metadata therefore cannot reach this hook.
 
 Progress markers: `Dmode.slot` accepts metadata; `Sslot.n` hashes source;
 `Bwindow.n` verifies the baseline; `Tslot.n` checks target; `Wslot.n` writes;
