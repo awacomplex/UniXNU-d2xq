@@ -289,6 +289,8 @@ def main():
         text = text.replace('200000', '20000').replace('500000', '50000')
         if header_name == 'RootCommands.h':
             text = text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
+            text = text.replace('if (read32 (gHost.hc, 0x58) != 0) {',
+                                'for (unsigned _dw = 0; _dw < 400000 && read32 (gHost.hc, 0x58) != 0; _dw++) { }\n  if (read32 (gHost.hc, 0x58) != 0) {')
             text = text.replace('  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);',
                                 '  d2xq_console_text("C4 ");\n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
             text = text.replace('  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);',
