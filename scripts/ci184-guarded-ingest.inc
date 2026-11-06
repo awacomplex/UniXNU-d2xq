@@ -8,6 +8,7 @@
       static const unsigned totalChunks = 140;
       static const uint8_t metadataMagic[8] = { 'D', '2', 'X', 'Q', 'I', 'N', '2', 0 };
       static const uint8_t safeCounterMagic[8] = { 'D', '2', 'S', 'A', 'F', 'E', '8', '4' };
+      static const uint8_t repairCounterMagic[8] = { 'D', '2', 'R', 'E', 'P', 'R', '8', '4' };
       static const uint8_t imageSha[SHA256_DIGEST_LENGTH] = {
         0xfd, 0x43, 0xee, 0x70, 0x35, 0xce, 0x18, 0x5c, 0xe4, 0x21, 0x5a, 0xc9, 0x3f, 0xdc, 0x00, 0x6f,
         0xd7, 0x84, 0xa5, 0x4b, 0x3b, 0x74, 0x42, 0xe2, 0x14, 0x57, 0xc2, 0x26, 0xcb, 0xe0, 0x30, 0x93
@@ -49,28 +50,41 @@
       if (memcmp (dma, "D2XQ", 4) != 0) panic ("CI184 FAIL counter magic");
       uint64_t counter = load64le (dma + 8);
       if (counter > totalChunks) panic ("CI184 FAIL counter=%llu", counter);
+      unsigned nextRepairSlot = load32le (dma + 4);
       bool safeCounter = memcmp (dma + 16, safeCounterMagic, sizeof (safeCounterMagic)) == 0;
-      if (safeCounter) {
+      bool repairCounter = memcmp (dma + 16, repairCounterMagic, sizeof (repairCounterMagic)) == 0;
+      bool legacyCounter = false;
+      if (safeCounter || repairCounter) {
         SHA256_CTX counterSha;
         uint8_t counterDigest[SHA256_DIGEST_LENGTH];
         SHA256_Init (&counterSha);
         SHA256_Update (&counterSha, dma, 64);
         SHA256_Final (counterDigest, &counterSha);
-        if (load32le (dma + 4) != 0 || memcmp (dma + 24, imageSha, SHA256_DIGEST_LENGTH) != 0 ||
+        if (memcmp (dma + 24, imageSha, SHA256_DIGEST_LENGTH) != 0 ||
             load64le (dma + 56) != ~counter || memcmp (counterDigest, dma + 64, SHA256_DIGEST_LENGTH) != 0)
           panic ("CI184 FAIL trusted counter checksum=%llu", counter);
         for (unsigned b = 96; b < 4096; b++)
           if (dma[b] != 0) panic ("CI184 FAIL trusted counter reserved b=%u", b);
+        if (safeCounter && (nextRepairSlot != 0 || counter < 8))
+          panic ("CI184 FAIL safe counter state=%llu repair=%u", counter, nextRepairSlot);
+        if (repairCounter && (counter != 7 || nextRepairSlot < 1 || nextRepairSlot > 7))
+          panic ("CI184 FAIL repair counter state=%llu repair=%u", counter, nextRepairSlot);
+      } else {
+        // Only the exact legacy index-seven block can begin repair slot zero.
+        // Unknown nonzero extensions must not silently restart the sequence.
+        if (counter != 7 || nextRepairSlot != 0)
+          panic ("CI184 FAIL legacy counter=%llu repair=%u", counter, nextRepairSlot);
+        for (unsigned b = 16; b < 4096; b++)
+          if (dma[b] != 0) panic ("CI184 FAIL unknown counter extension b=%u", b);
+        legacyCounter = true;
       }
-      if (counter > 7 && !safeCounter)
-        panic ("CI184 FAIL legacy counter=%llu needs audit", counter);
       static uint8_t savedCounter[4096];
       memcpy (savedCounter, dma, sizeof (savedCounter));
       d2xq_console_text ("C1 ");
 
       readBlock (recoveryFirst + chunkBlocks, "metadata", 0);
       if (memcmp (dma, metadataMagic, sizeof (metadataMagic)) != 0)
-        panic ("CI184 READY counter=%llu metadata missing", counter);
+        panic ("CI184 READY counter=%llu repair=%u metadata missing", counter, nextRepairSlot);
       if (load32le (dma + 8) != 2 || load32le (dma + 12) != 128)
         panic ("CI184 FAIL metadata version/size");
       for (unsigned b = 128; b < 4096; b++)
@@ -94,14 +108,22 @@
         panic ("CI184 FAIL metadata SHA slot=%u", slot);
       bool already = false;
       if (mode == 1) {
-        if (slot >= 7 || expectedCounter != 7 || counter != 7)
+        if (slot >= 7 || expectedCounter != 7 || counter != 7 || (!legacyCounter && !repairCounter))
           panic ("CI184 FAIL repair slot=%u counter=%llu expected=%llu", slot, counter, expectedCounter);
+        if (slot != nextRepairSlot)
+          panic ("CI184 FAIL repair sequence slot=%u next=%u counter=%llu", slot, nextRepairSlot, counter);
       } else {
         if (slot < 7 || expectedCounter != slot || (counter != slot && counter != (uint64_t) slot + 1))
           panic ("CI184 FAIL append slot=%u counter=%llu expected=%llu", slot, counter, expectedCounter);
         already = counter == (uint64_t) slot + 1;
         if ((slot >= 8 || already) && !safeCounter)
           panic ("CI184 FAIL untrusted append counter=%llu slot=%u", counter, slot);
+        // A stale append trailer may have the same payload as the next all-zero
+        // chunk.  Completion must stop here, before any flush, write or reset.
+        if (already)
+          panic ("CI184 ALREADY slot=%u counter=%llu next=%llu", slot, counter, counter);
+        if (slot == 7 && repairCounter && nextRepairSlot != 7)
+          panic ("CI184 FAIL incomplete repair next=%u", nextRepairSlot);
       }
       const uint64_t dst = layout->userdataFirst + (uint64_t) slot * chunkBlocks;
       const uint64_t dstEnd = dst + chunkBlocks;
@@ -157,7 +179,7 @@
       if (already && !skipped)
         panic ("CI184 FAIL advanced counter target slot=%u got=%llx", slot, digestPrefix (targetDigest));
       auto writeBlock = [&] (uint64_t lba, bool counterWrite, uint64_t block) {
-        if (already || lba > 0xffffffffULL || (counterWrite ? (mode != 2 || lba != ctrLba) : (lba < dst || lba >= dstEnd)))
+        if (already || lba > 0xffffffffULL || (counterWrite ? (lba != ctrLba) : (lba < dst || lba >= dstEnd)))
           panic ("CI184 FAIL write bounds slot=%u lba=%llx", slot, lba);
         uint8_t cdb[10] = { 0x2a, 0, (uint8_t) (lba >> 24), (uint8_t) (lba >> 16),
                             (uint8_t) (lba >> 8), (uint8_t) lba, 0, 0, 1, 0 };
@@ -206,12 +228,16 @@
       }
 
       uint64_t finalCounter = counter;
-      if (mode == 2 && !already) {
-        finalCounter = (uint64_t) slot + 1;
+      if (!already) {
+        if (mode == 2) finalCounter = (uint64_t) slot + 1;
         memset (savedCounter, 0, sizeof (savedCounter));
         memcpy (savedCounter, "D2XQ", 4);
+        if (mode == 1) {
+          unsigned nextRepair = slot + 1;
+          for (unsigned b = 0; b < 4; b++) savedCounter[4 + b] = (uint8_t) (nextRepair >> (8 * b));
+        }
         for (unsigned b = 0; b < 8; b++) savedCounter[8 + b] = (uint8_t) (finalCounter >> (8 * b));
-        memcpy (savedCounter + 16, safeCounterMagic, sizeof (safeCounterMagic));
+        memcpy (savedCounter + 16, mode == 1 ? repairCounterMagic : safeCounterMagic, sizeof (safeCounterMagic));
         memcpy (savedCounter + 24, imageSha, SHA256_DIGEST_LENGTH);
         uint64_t inverseCounter = ~finalCounter;
         for (unsigned b = 0; b < 8; b++) savedCounter[56 + b] = (uint8_t) (inverseCounter >> (8 * b));
@@ -228,8 +254,8 @@
           panic ("CI184 FAIL counter verify slot=%u", slot);
         d2xq_console_text ("N1 ");
       }
-      // Source and target were verified; an append counter was flushed and
-      // read back exactly.  Reset is eligible only at this success point.
+      // Source and target were verified; the repair progress or append index
+      // was flushed and read back exactly.  Reset is eligible only here.
       /* CI184_SUCCESS_HOOK */
       panic ("CI184 PASS mode=%u slot=%u counter=%llu skip=%u already=%u",
              mode, slot, finalCounter, (unsigned) skipped, (unsigned) already);
