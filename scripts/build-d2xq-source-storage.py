@@ -217,6 +217,7 @@ def main():
              '      }\n'
              '      panic ("ING done %llu", chunkBlocks); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
+    ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     if '      if (!runtimeQueueStart (why)) {' in ufs_text:
@@ -287,6 +288,7 @@ def main():
         text = header.read_text()
         text = text.replace('200000', '20000').replace('500000', '50000')
         if header_name == 'RootCommands.h':
+            text = text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
             text = text.replace('  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);',
                                 '  d2xq_console_text("C4 ");\n  cacheInvalidate (gHost.virt, kDataOffset + dataBytes);', 1)
             text = text.replace('  return recordTransport (*ocs == 0 ? kIOReturnSuccess : kIOReturnIOError, *ocs);',
