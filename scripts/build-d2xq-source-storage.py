@@ -192,18 +192,30 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = ('    { const uint64_t chunkBlocks = 16384;\n'
+             '      const uint64_t imageBytes = 9382658048ULL;\n'
+             '      const uint64_t totalChunks = (imageBytes + chunkBlocks * 4096 - 1) / (chunkBlocks * 4096);\n'
+             '      uint32_t st0 = 0; uint8_t uc[10] = { 0x28, 0, 0, 0x21, 0xF4, 0x00, 0, 0, 1, 0 };\n'
+             '      hostScsiDir (0, uc, 10, 2, 4096, 1900000, &st0);\n'
+             '      uint64_t index = 0;\n'
+             '      if (gScratch[0] != 0xEE) { }\n'
              '      uint8_t *dma = (uint8_t *) gHost.virt + kDataOffset;\n'
-             '      for (unsigned k = 0; k < 4096; k++) dma[k] = 0x5A;\n'
+             '      for (volatile unsigned k = 0; k < 4096; k++) dma[k] = gScratch[k];\n'
              '      uint64_t dst = layout->userdataFirst;\n'
              '      for (uint64_t i = 0; i < chunkBlocks; i++) {\n'
+             '        uint64_t slba = 0x24F13 + i;\n'
+             '        uint8_t rcdb[10] = { 0x28, 0, (uint8_t) (slba >> 24), (uint8_t) (slba >> 16), (uint8_t) (slba >> 8), (uint8_t) slba, 0, 0, 1, 0 };\n'
+             '        uint32_t rst = 0;\n'
+             '        IOReturn rr = hostScsiDir (0, rcdb, 10, 2, 4096, 1900000, &rst);\n'
+             '        if (rr != kIOReturnSuccess || rst != 0) panic ("ING r %llu rr=%x st=%04x ready=%u pois=%u", i, rr, rst, gHost.ready ? 1U : 0U, gHost.poisoned ? 1U : 0U);\n'
+             '        for (unsigned k = 0; k < 4096; k++) dma[k] = gScratch[k];\n'
              '        uint64_t lba = dst + i;\n'
              '        uint8_t cdb[10] = { 0x2A, 0, (uint8_t) (lba >> 24), (uint8_t) (lba >> 16), (uint8_t) (lba >> 8), (uint8_t) lba, 0, 0, 1, 0 };\n'
              '        uint32_t st = 0;\n'
              '        IOReturn wr = hostScsiDir (0, cdb, 10, 1, 4096, 1900000, &st);\n'
-             '        if (wr != kIOReturnSuccess || st != 0) panic ("WONLY %llu wr=%x st=%04x ready=%u pois=%u", i, wr, st, gHost.ready ? 1U : 0U, gHost.poisoned ? 1U : 0U);\n'
+             '        if (wr != kIOReturnSuccess || st != 0) panic ("ING w %llu wr=%x st=%04x ready=%u pois=%u", i, wr, st, gHost.ready ? 1U : 0U, gHost.poisoned ? 1U : 0U);\n'
              '        for (volatile unsigned spin = 0; spin < 200000; spin++) { }\n'
              '      }\n'
-             '      panic ("WONLY done %llu", chunkBlocks); }\n')
+             '      panic ("ING done %llu", chunkBlocks); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
