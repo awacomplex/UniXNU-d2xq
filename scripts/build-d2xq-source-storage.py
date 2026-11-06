@@ -268,7 +268,7 @@ def main():
             text = text.replace('void delay () { IODelay (2); }',
                                 'void delay () { }', 1)
             text = text.replace('bool expired () { return mach_absolute_time () >= deadline; }',
-                                'bool expired () { static uint32_t calls; calls++; return calls > 400; }', 1)
+                                'bool expired () { static uint32_t calls; calls++; return calls > 100000000U; }', 1)
             text = text.replace('  status = hostResponseHeader (0x21, lun, 0);',
                                 '  d2xq_console_text("P ");\n  status = hostResponseHeader (0x21, lun, 0);', 1)
             text = text.replace('  *scsiStatus = (uint32_t (rsp[6]) << 8) | rsp[7];',
