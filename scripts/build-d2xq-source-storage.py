@@ -208,6 +208,7 @@ def main():
              '        uint32_t st = 0;\n'
              '        IOReturn wr = hostScsiDir (0, cdb, 10, 1, 4096, 20000, &st);\n'
              '        if (wr != kIOReturnSuccess) panic ("INGEST w %llu/%llu wr=%x st=%04x", index, i, wr, st);\n'
+             '        for (volatile unsigned spin = 0; spin < 200000; spin++) { }\n'
              '      }\n'
              '      for (unsigned k = 0; k < 4096; k++) gScratch[k] = 0;\n'
              '      gScratch[0] = 0x44; gScratch[1] = 0x32; gScratch[2] = 0x58; gScratch[3] = 0x51;\n'
