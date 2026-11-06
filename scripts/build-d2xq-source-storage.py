@@ -226,8 +226,8 @@ def main():
              '        uint8_t cdb[10] = { 0x2A, 0, (uint8_t) (lba >> 24), (uint8_t) (lba >> 16), (uint8_t) (lba >> 8), (uint8_t) lba, 0, 0, 1, 0 };\n'
              '        uint32_t st = 0;\n'
              '        hostScsiDir (0, cdb, 10, 1, 4096, 20000, &st); }\n'
-             '      asm volatile ("mov x0, #0x84000009\\n\\t smc #0" ::: "x0", "memory");\n'
-             '      asm volatile ("mov x0, #0x84000009\\n\\t hvc #0" ::: "x0", "memory");\n'
+             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16\\n\\t smc #0" ::: "x0", "memory");\n'
+             '      asm volatile ("movz x0, #0x0009; movk x0, #0x8400, lsl #16\\n\\t hvc #0" ::: "x0", "memory");\n'
              '      panic ("INGEST reset after %llu/%llu", next, totalChunks); }\n')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('500000', '50000').replace('200000', '20000')
