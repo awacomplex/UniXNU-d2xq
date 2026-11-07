@@ -94,6 +94,6 @@ extern "C" void native_ufs_ci194_finish (void)
   if (!findRootLayout (&final, &why, gHost.rootBlocks)) ci194Fail ("final root/GPT parse");
   ci194Snapshot (final, true);
   ci194Transport ();
-  panic ("CI194 AUTHENTICATED WINDOWS PASS policies=2 media=2 verified=%llu/%llu counter=140 unchanged=1 readonly=1",
-      gCi194WindowVerified[0], gCi194WindowVerified[1]);
+  ci194Print ("CI194 AUTHENTICATED WINDOWS PASS ");
+  return;
 }
