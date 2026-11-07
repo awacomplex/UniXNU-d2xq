@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "nonce": "2f1002ef48897a7639651f4215d697be511997eb10c3f5f7b20073c3d8de108b",
+  "arm_sha256": "e89c31a3533211eb379636df3e57b79a3d9efa3f43d11e72cf932c6af2975e49",
+  "image_sha256": "fd43ee7035ce185ce4215ac93fdc006fd784a54b3b7442e21457c226cbe03093",
+  "recovery_first": 151315,
+  "userdata_first": 2225152,
+  "userdata_last": 62458874,
+  "counter": 7,
+  "next_repair_slot": 2
+}

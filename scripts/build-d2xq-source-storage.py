@@ -200,15 +200,15 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = (ROOT / 'scripts/ci184-guarded-ingest.inc').read_text()
-    reset_probe_marker = '/* CI189_RESET_PROBE */'
+    reset_probe_marker = '/* CI190_RESET_PROBE */'
     if probe.count(reset_probe_marker) != 1:
         sys.exit('CI189 reset probe marker missing')
-    reset_probe = (ROOT / 'scripts/ci189-reset-probe.inc').read_text()
-    hardware_marker = '/* CI189_RESET_HARDWARE */'
+    reset_probe = (ROOT / 'scripts/ci190-reset-probe.inc').read_text()
+    hardware_marker = '/* CI190_RESET_HARDWARE */'
     if reset_probe.count(hardware_marker) != 1:
         sys.exit('CI189 reset hardware marker missing')
     reset_probe = reset_probe.replace(hardware_marker,
-        (ROOT / 'scripts/ci189-reset-hardware.inc').read_text(), 1)
+        (ROOT / 'scripts/ci190-reset-hardware.inc').read_text(), 1)
     probe = probe.replace(reset_probe_marker, reset_probe, 1)
     hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
     if probe.count(hash_marker) != 1:
