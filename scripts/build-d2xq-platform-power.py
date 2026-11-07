@@ -286,8 +286,10 @@ def audit_object(path, np):
     section = sections[number - 1]
     following = min([value for sec, value in defined.values() if sec == number and value > address] +
                     [section['va'] + section['size']])
-    require(following - address == 342 * 8,
-            'Compiled provider vtable must contain exactly 340 slots (actual=%d bytes, %d slots)' % (following - address, (following - address) // 8 - 2))
+    # 340 inherited slots plus, when the original base has no virtual destructor,
+    # one derived destructor slot appended after them. Base slots keep their indexes.
+    require(following - address in (342 * 8, 343 * 8),
+            'Compiled provider vtable must contain 340 or 341 slots (actual=%d bytes, %d slots)' % (following - address, (following - address) // 8 - 2))
     # Mach-O unsigned external pointer relocations must name the real AON methods.
     section_at = section['command_offset']
     reloff, nreloc = struct.unpack_from('<II', data, section_at + 56)
