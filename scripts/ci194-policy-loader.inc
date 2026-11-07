@@ -34,17 +34,23 @@ bool NativeUfsBlock::configureVerification ()
   bzero (reinterpret_cast<void *> (verifiedStorage), verifiedStorageBytes);
   SHA256_CTX context; SHA256_Init (&context);
   const uint64_t blocks = (d.manifestBytes + 4095) / 4096;
-  for (uint64_t index = 0; index < blocks; ++index) {
-    if ((index & 4095U) == 0) ci194Print (selected ? "CI194 S ": "CI194 O ");
+  const uint64_t chunkBlocks = kDataMax / 4096;
+  for (uint64_t base = 0; base < blocks; base += chunkBlocks) {
+    if ((base & 4095U) == 0) ci194Print (selected ? "CI194 S ": "CI194 O ");
+    const uint32_t count = static_cast<uint32_t> (blocks - base < chunkBlocks ? blocks - base : chunkBlocks);
     gRootDiagnostic.stage = "CI194 fixed policy READ10";
-    if (hostRead4k (0, d.firstLba + index, 1, bounce) != kIOReturnSuccess) return reject ();
-    const uint64_t relative = index * 4096;
-    const size_t length = static_cast<size_t> (d.manifestBytes - relative < 4096 ? d.manifestBytes - relative : 4096);
-    for (size_t n = length; n < 4096; ++n) if (bounce[n]) {
-      gRootDiagnostic.stage = "CI194 policy nonzero padding"; return reject ();
+    if (hostRead4k (0, d.firstLba + base, count, bounce) != kIOReturnSuccess) return reject ();
+    for (uint32_t slot = 0; slot < count; ++slot) {
+      const uint64_t index = base + slot;
+      const uint64_t relative = index * 4096;
+      const size_t length = static_cast<size_t> (d.manifestBytes - relative < 4096 ? d.manifestBytes - relative : 4096);
+      const uint8_t *src = bounce + slot * 4096;
+      for (size_t n = length; n < 4096; ++n) if (src[n]) {
+        gRootDiagnostic.stage = "CI194 policy nonzero padding"; return reject ();
+      }
+      memcpy (reinterpret_cast<uint8_t *> (verifiedStorage) + relative, src, length);
+      SHA256_Update (&context, src, length);
     }
-    memcpy (reinterpret_cast<uint8_t *> (verifiedStorage) + relative, bounce, length);
-    SHA256_Update (&context, bounce, length);
   }
   uint8_t digest[32]; SHA256_Final (digest, &context);
   if (memcmp (digest, d.manifestSha256, 32)) {
