@@ -1,22 +1,11 @@
 --- a/bsd/kern/kern_exit.c
 +++ b/bsd/kern/kern_exit.c
-@@ -1869,6 +1869,19 @@
- 
- 	proc_crash_coredump(p);
- 
- 	sync(p, (void *)NULL, (int *)NULL);
- 
-+	{
-+#if defined(XNU_OWNER_CACHE_MOUNT) && XNU_OWNER_CACHE_MOUNT
-+		extern volatile int native_owner_cache_stage, native_owner_cache_status, native_owner_cache_mount_status;
-+		extern volatile int native_owner_cache_readonly, native_owner_cache_authorized, native_owner_cache_root_recheck;
-+		extern volatile dev_t native_owner_cache_selected_device, native_owner_cache_mounted_device;
-+		extern char native_owner_cache_device_path[];
-+		printf("CI194 initproc sig=%d cs=%x cache stage=%d status=%d mount=%d ro=%d auth=%d recheck=%d sel=%d mnt=%d path=%s\n",
-+		    WTERMSIG(rv), proc_getcsflags(p), native_owner_cache_stage, native_owner_cache_status,
-+		    native_owner_cache_mount_status, native_owner_cache_readonly, native_owner_cache_authorized,
-+		    native_owner_cache_root_recheck, (int)native_owner_cache_selected_device,
-+		    (int)native_owner_cache_mounted_device, native_owner_cache_device_path);
-+#endif
-+	}
- 	if (p->p_exit_reason == OS_REASON_NULL) {
+@@ -1860,3 +1860,7 @@
+ 		} else {
+-			prefix_str = "initproc failed to start";
++			extern volatile int native_owner_cache_stage, native_owner_cache_status, native_owner_cache_mount_status;
++			extern volatile int native_owner_cache_authorized, native_owner_cache_readonly;
++			extern volatile dev_t native_owner_cache_selected_device, native_owner_cache_mounted_device;
++			snprintf(prefix_str_buf, sizeof(prefix_str_buf), "initproc failed to start [stage=%d status=%d mount=%d auth=%d ro=%d sel=%d mnt=%d]", native_owner_cache_stage, native_owner_cache_status, native_owner_cache_mount_status, native_owner_cache_authorized, native_owner_cache_readonly, (int)native_owner_cache_selected_device, (int)native_owner_cache_mounted_device);
++			prefix_str = prefix_str_buf;
+ 		}
