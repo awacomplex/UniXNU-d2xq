@@ -72,6 +72,7 @@ archives = [
   # 源构建块存储运行时：编译公开 IOBlockStorageDevice（改名晚注册）+ NativeUfs/NativeRamBlock
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
   "build-d2xq-source-storage.py",
+  "build-d2xq-platform-power.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
   # build-virtio-mmio-bindings.py 需要 build/storage-abi/interface-audit.json，
   # 而该文件只能由 audit-storage-interface.py 用「真机 guest 元数据 + 原始内核」

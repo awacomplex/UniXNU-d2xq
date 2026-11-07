@@ -1,0 +1,70 @@
+diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
+--- a/bsd/kern/bsd_init.c
++++ b/bsd/kern/bsd_init.c
+@@ -942,5 +942,15 @@
+ 	bsd_init_kprintf("calling bsd_autoconf\n");
+-	bsd_autoconf();
++	{
++		kern_return_t status = bsd_autoconf();
++		unsigned ci194 = 0;
++		if (PE_parse_boot_argn("native-ufs-ci194", &ci194, sizeof(ci194)) &&
++		    ci194 == 1 && status != KERN_SUCCESS) {
++			panic("CI194 LATE FAIL bsd_autoconf %x", status);
++		}
++		/* Strong reference: a CI194 image cannot omit its terminal late hook. */
++		extern void native_source_storage_ci194_validate(void);
++		native_source_storage_ci194_validate();
++	}
+ 
+ #if CONFIG_DTRACE
+ 	dtrace_postinit();
+diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -12834,44 +12834,9 @@
+ 
+ 
+ /*
+- * d2xq: link stubs for the NativeUfs archive (ShengUfs).
+- *
+- * The driver references the VerifiedRoot kit (vr_open / vr_verify_block /
+- * vr_xnu_crypto and the key/policy bundle) and the RamBlock and boot-log
+- * shutdown helpers. The storage ABI bindings for this board do not exist yet,
+- * so provide failing stubs: the archive links, verification always fails and
+- * nothing is written back. Remove this section once the real bindings arrive.
++ * CI194 links the real VerifiedRoot crypto, verifier and owner-key bindings.
++ * Keep the independent shutdown fallbacks until those providers are linked.
+  */
+-const unsigned char verified_root_key[395] = { 0 };
+-const unsigned long long verified_root_policies[1] = { 0 };
+-const unsigned long long verified_root_policy_count = 0;
+-const unsigned char vr_xnu_crypto[16] = { 0 };
+-
+-int
+-vr_open(const void *envelope, unsigned long length, const void *key,
+-    unsigned long long generation, const void *crypto, void *view)
+-{
+-	(void)envelope;
+-	(void)length;
+-	(void)key;
+-	(void)generation;
+-	(void)crypto;
+-	(void)view;
+-	return 1; /* fail closed: the root is never accepted as verified */
+-}
+-
+-int
+-vr_verify_block(const void *view, unsigned long long index, const void *data,
+-    unsigned long length, const void *crypto)
+-{
+-	(void)view;
+-	(void)index;
+-	(void)data;
+-	(void)length;
+-	(void)crypto;
+-	return 1;
+-}
+-
+ int
+ native_ram_block_shutdown(void)
+ {

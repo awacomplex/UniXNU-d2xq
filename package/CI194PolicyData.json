@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "mode": "authenticated-windows-readonly",
+  "ci193_binding_sha256": "429a0a4747ad728d4e4e54a98ca64212974b284f329ee7a04f97149252c97d64",
+  "independent_C_report_sha256": "ff44fb7b307f96245d5452bcf013afce71691ac772ca21988bc94938d1ffc399",
+  "policy_data_sha256": "c295567c94574690405bbd5ba1fc0dff1569d2781cedca9a427753791759cf8f",
+  "trusted_key_sha256": "3dc03f5d256dfbc961633d0e7810a714f147c808462c068aa40b99994da873ae",
+  "external_descriptor_bytes": 136,
+  "legacy_descriptor_bytes": 16,
+  "real_policy_count": 2,
+  "legacy_disabled_policy_count": 0,
+  "source_policy_sha256": [
+    "c9d5b1dd309c3ab907a5a65240d16dcad32c0e9dcfae5f38a0c75d1122394fe6",
+    "9879d848b1608baebc140f1afb9a5d086706143e5a9560115f54cb46a67b7e10"
+  ],
+  "crypto_known_signature_tests": 2,
+  "private_key_included": false
+}

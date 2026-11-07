@@ -17,9 +17,31 @@ extern kmod_info_t g_kernel_kmod_info;
 extern "C" void source_storage_base_init(void) __asm__("__GLOBAL__sub_I_IOBlockStorageDevice.cpp");
 extern "C" void source_storage_ufs_init(void) __asm__("__GLOBAL__sub_I_NativeUfs.cpp");
 extern "C" void source_storage_ram_init(void) __asm__("__GLOBAL__sub_I_NativeRamBlock.cpp");
+// CI194 uses strong interfaces: missing runtime providers must fail the link.
+extern "C" int d2xq_ci194_pmgr_ready(void);
+extern "C" void d2xq_ci194_crypto_ready(void);
+extern "C" void native_ufs_ci194_finish(void);
 
 static const OSMetaClass *storageParent;
 static bool attempted;
+
+static bool
+source_storage_ci194_enabled(void)
+{
+	unsigned enabled = 0;
+	return PE_parse_boot_argn("native-ufs-ci194", &enabled, sizeof(enabled)) && enabled == 1;
+}
+
+static const OSMetaClass *
+source_storage_metaclass(const char *className)
+{
+	const OSSymbol *name = OSSymbol::withCString(className);
+	const OSMetaClass *result = name ? OSMetaClass::getMetaClassWithName(name) : nullptr;
+	if (name) {
+		name->release();
+	}
+	return result;
+}
 
 // The driver records its bring-up stage here so the watchdog can report a stall.
 extern "C" volatile int d2xq_ufs_stage = -1;
@@ -63,11 +85,15 @@ extern "C" const OSMetaClass *native_source_storage_parent(void)
 	return storageParent;
 }
 
-extern "C" void native_source_storage_start(void)
+static void
+native_source_storage_start_internal(bool ci194)
 {
 	unsigned enabled = 0;
 
 	if (!PE_parse_boot_argn("native-source-storage", &enabled, sizeof(enabled)) || enabled != 1 || attempted) {
+		if (ci194) {
+			panic("CI194 LATE REFUSE source disabled or repeated entry");
+		}
 		return;
 	}
 	d2xq_console_text("V8 ");
@@ -80,9 +106,12 @@ extern "C" void native_source_storage_start(void)
 	d2xq_console_text("V8 ");
 
 	d2xq_ufs_stage = 1; d2xq_console_text("S1 ");
-	thread_t watchdog = nullptr;
-	if (kernel_thread_start(d2xq_ufs_watchdog, nullptr, &watchdog) == KERN_SUCCESS) {
-		thread_deallocate(watchdog);
+	// Full manifest/RSA verification can exceed the old diagnostic timeout.
+	if (!ci194) {
+		thread_t watchdog = nullptr;
+		if (kernel_thread_start(d2xq_ufs_watchdog, nullptr, &watchdog) == KERN_SUCCESS) {
+			thread_deallocate(watchdog);
+		}
 	}
 
 	OSReturn status = OSKextLoadKextWithIdentifier("com.apple.iokit.IOStorageFamily");
@@ -90,11 +119,7 @@ extern "C" void native_source_storage_start(void)
 		panic("SourceStorage: IOStorageFamily load failed %x", status);
 	}
 	d2xq_ufs_stage = 2; d2xq_console_text("S2 ");
-	const OSSymbol *name = OSSymbol::withCString("IOBlockStorageDevice");
-	storageParent = name ? OSMetaClass::getMetaClassWithName(name) : nullptr;
-	if (name) {
-		name->release();
-	}
+	storageParent = source_storage_metaclass("IOBlockStorageDevice");
 	if (!storageParent || storageParent->getClassSize() != sizeof(IOBlockStorageDevice)) {
 		panic("SourceStorage: original base layout %u differs from source %lu",
 		    storageParent ? storageParent->getClassSize() : 0, sizeof(IOBlockStorageDevice));
@@ -112,6 +137,17 @@ extern "C" void native_source_storage_start(void)
 	status = OSMetaClass::postModLoad(handle);
 	if (status != kOSReturnSuccess) {
 		panic("SourceStorage: class registration failed %x", status);
+	}
+	if (ci194) {
+		const OSMetaClass *lateBase = source_storage_metaclass("UniXNUBlockStorageDevice");
+		const OSMetaClass *ufsBlockClass = source_storage_metaclass("NativeUfsBlock");
+		if (!lateBase || lateBase == storageParent ||
+		    lateBase->getClassSize() != sizeof(IOBlockStorageDevice) ||
+		    lateBase->getSuperClass() != storageParent || !ufsBlockClass ||
+		    ufsBlockClass->getSuperClass() != lateBase) {
+			panic("CI194 LATE REFUSE storage metaclass ancestry");
+		}
+		d2xq_console_text("CI194 STORAGE ABI OK ");
 	}
 
 	d2xq_ufs_stage = 5; d2xq_console_text("S5 ");
@@ -154,4 +190,48 @@ extern "C" void native_source_storage_start(void)
 	}
 	d2xq_ufs_stage = -1;
 	printf("SourceStorage: UFS started through public IOStorageFamily interface\n");
+}
+
+extern "C" void native_source_storage_start(void)
+{
+	// The old vfsinit hook runs before bsd_autoconf()/IOKitBSDInit. CI194 needs
+	// the latter complete before kext crypto dispatch and BSD media validation.
+	if (source_storage_ci194_enabled()) {
+		d2xq_console_text("CI194 SOURCE DEFERRED ");
+		return;
+	}
+	native_source_storage_start_internal(false);
+}
+
+extern "C" void native_source_storage_ci194_validate(void)
+{
+	if (!source_storage_ci194_enabled()) {
+		return;
+	}
+	unsigned enabled = 0;
+	if (!PE_parse_boot_argn("native-source-storage", &enabled, sizeof(enabled)) ||
+	    enabled != 1 || attempted) {
+		panic("CI194 LATE REFUSE source disabled or repeated entry");
+	}
+	d2xq_console_text("CI194 LATE BEGIN ");
+	if (d2xq_ci194_pmgr_ready() != 1) {
+		panic("CI194 LATE REFUSE PMGR provider not ready");
+	}
+	d2xq_console_text("CI194 PMGR READY ");
+	OSReturn status = OSKextLoadKextWithIdentifier("com.apple.kec.corecrypto");
+	if (status != kOSReturnSuccess) {
+		panic("CI194 LATE FAIL corecrypto load %x", status);
+	}
+	d2xq_console_text("CI194 CORECRYPTO LOADED ");
+	d2xq_ci194_crypto_ready();
+	status = OSKextLoadKextWithIdentifier("com.apple.filesystems.apfs");
+	if (status != kOSReturnSuccess) {
+		panic("CI194 LATE FAIL APFS load %x", status);
+	}
+	d2xq_console_text("CI194 APFS LOADED ");
+	native_source_storage_start_internal(true);
+	// This validation build cannot continue into setconf/root mount, even if a
+	// provider unexpectedly violates its terminal contract.
+	native_ufs_ci194_finish();
+	panic("CI194 LATE FAIL finish returned");
 }

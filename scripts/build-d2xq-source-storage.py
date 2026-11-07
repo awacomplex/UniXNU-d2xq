@@ -15,6 +15,8 @@ at boot. This builder:
 The runtime side lives in package/SourceStorage.cpp (called from bsd_init).
 """
 import json
+import hashlib
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -97,6 +99,10 @@ def main():
         sys.exit(f'{RECORD} missing: the kernel needs one pass for the compile records')
 
     OUT.mkdir(parents=True, exist_ok=True)
+    transform_path = DEVICE / 'scripts/ci194-native-policy.py'
+    spec = importlib.util.spec_from_file_location('ci194_native_policy', transform_path)
+    ci194 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ci194)
     base_source = OUT / 'IOBlockStorageDevice.cpp'
     original = (STORAGE / 'IOBlockStorageDevice.cpp').read_text()
     if original.count(REGISTRATION) != 1:
@@ -199,29 +205,9 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    # CI193 can write only the fixed external policy extent.  It never expands
-    # an image-ingest, progress-write or reset path, and terminates after readback.
-    probe = (ROOT / 'scripts/ci193-policy-write.inc').read_text()
-    bindings = (ROOT / 'scripts/ci193-policy-bindings.inc').read_text()
-    binding_record = json.loads((ROOT / 'scripts/ci193-policy-bindings.json').read_text())
-    marker = '/* CI193_POLICY_BINDINGS */'
-    if probe.count(marker) != 1 or binding_record.get('mode') != 'policy-write':
-        sys.exit('CI193 policy binding marker or scope changed')
-    import hashlib
-    if hashlib.sha256(bindings.encode()).hexdigest() != binding_record['bindings_sha256']:
-        sys.exit('CI193 policy binding source digest mismatch')
-    if (binding_record['payload_bytes'] != 73293824 or
-        binding_record['target_first_lba'] != 0x44f800 or
-        binding_record['target_end_lba'] != 0x453de6 or
-        len(binding_record['policies']) != 2):
-        sys.exit('CI193 pinned policy geometry changed')
-    probe = probe.replace(marker, bindings, 1)
-    if '/* CI' in probe or 'CI193 POLICY WRITE PASS' not in probe:
-        sys.exit('CI193 policy writer expansion incomplete')
-    for obsolete in ('CI192', 'CI191', 'CI184 READY', 'reset_observed', 'resetDownload'):
-        if obsolete in probe:
-            sys.exit('CI193 includes an obsolete image/reset path: ' + obsolete)
-    ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
+    # The previous policy writer is not expanded. This kernel has no diagnostic
+    # path that accepts a mutable RECOVERY upload or writes userdata.
+    ufs_text = ufs_text[:begin] + '    panic ("CI194 REFUSE obsolete probe10");' + ufs_text[end:]
     ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
     if '      if (!runtimeQueueStart (why)) {' in ufs_text:
@@ -232,7 +218,7 @@ def main():
     ufs_text = ufs_text.replace('    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {',
                                 '    d2xq_console_text("U ");\n    if (hostScsi (0, tur, 6, false, 0, 20000, &scsi) == kIOReturnSuccess) {', 1)
     patched_ufs = OUT / 'driver' / 'NativeUfs.cpp'
-    patched_ufs.write_text(ufs_text.replace(missing, fallback, 1))
+    patched_ufs.write_text(ci194.transform_ufs(ufs_text.replace(missing, fallback, 1)))
     native_ufs = patched_ufs
 
     # A 136 KiB physically-contiguous request may never be satisfied at this boot
@@ -307,18 +293,61 @@ def main():
                                 '  d2xq_console_text("G4 ");\n  if (readManifest) {', 1)
             layout_hdr.write_text(text)
 
+    # Apply read-only guards only after the established small-DMA/transport
+    # fixes, so no later textual replacement can weaken the CI194 checks.
+    for header in ufs_include.glob('*.h'):
+        text = header.read_text()
+        updated = ci194.transform_header(header.name, text)
+        if updated != text:
+            header.write_text(updated)
+
     record = load_record()
     objects = []
     for source in (base_source, native_ufs, native_ram, source_storage):
         symbol = source.name
         obj = OUT / (source.stem + '.o')
-        extra = (ufs_include,) if source == native_ufs else ()
+        extra = (ufs_include, DEVICE / 'package', ROOT / 'kits/VerifiedRoot/include',
+                 ROOT / 'drivers/VirtioMmioBlock') if source == native_ufs else ()
         command = compile_command(record, source, obj, extra)
+        if source == native_ufs:
+            command += ['-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_UFS_OWNER_ROOT_API=1']
         result = subprocess.run(command, cwd=record['directory'], capture_output=True, text=True)
         (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
         if result.returncode:
             sys.exit((result.stdout + result.stderr)[-4000:])
         objects.append(late_object(obj, symbol))
+
+    # Preserve the original C verifier and XNU adapter without an alternate
+    # probe mode. Put exactly one real provider in the already force-loaded
+    # storage archive, alongside small public descriptors and readiness checks.
+    kit = ROOT / 'kits/VerifiedRoot'
+    original_sources = [
+        (kit / 'src/verified_root.c', 'f190f94bed1da37cf25c3123aa0df2670bb555477c8c1d90bc2f3cac4cc892b4'),
+        (kit / 'adapters/xnu_crypto.c', '56926382a963d704cedbf96791391660e5346f5b409d8614aacc5fab7634c8b7'),
+    ]
+    for source, digest in original_sources:
+        if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+            sys.exit('CI194 original VerifiedRoot implementation changed: ' + str(source))
+    c_recipe = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/bsd_init.o.json'
+    c_record = json.loads(c_recipe.read_text().strip().rstrip(','))
+    policy_source = DEVICE / 'package/CI194PolicyData.cpp'
+    policy_record = json.loads(policy_source.with_suffix('.json').read_text())
+    if hashlib.sha256(policy_source.read_text().encode()).hexdigest() != policy_record['policy_data_sha256']:
+        sys.exit('CI194 immutable policy source digest mismatch')
+    if (policy_record['mode'] != 'authenticated-windows-readonly' or
+        policy_record['real_policy_count'] != 2 or policy_record['private_key_included'] is not False):
+        sys.exit('CI194 policy descriptor scope changed')
+    provider_sources = [p for p, _ in original_sources] + [policy_source, DEVICE / 'package/CI194Crypto.cpp']
+    for source in provider_sources:
+        obj = OUT / (source.stem + '.o')
+        recipe = c_record if source.suffix == '.c' else record
+        command = compile_command(recipe, source, obj,
+                                  (kit / 'include', DEVICE / 'package', ROOT / 'drivers/VirtioMmioBlock'))
+        result = subprocess.run(command, cwd=recipe['directory'], capture_output=True, text=True)
+        (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
+        if result.returncode:
+            sys.exit((result.stdout + result.stderr)[-6000:])
+        objects.append(obj)
 
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
