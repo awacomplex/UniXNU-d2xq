@@ -322,8 +322,8 @@ def main():
     # storage archive, alongside small public descriptors and readiness checks.
     kit = ROOT / 'kits/VerifiedRoot'
     original_sources = [
-        (kit / 'src/verified_root.c', 'f190f94bed1da37cf25c3123aa0df2670bb555477c8c1d90bc2f3cac4cc892b4'),
-        (kit / 'adapters/xnu_crypto.c', '56926382a963d704cedbf96791391660e5346f5b409d8614aacc5fab7634c8b7'),
+        (kit / 'src/verified_root.c', 'd3a07258f96664c24764e429a860a47998b28475b945c1ba2ec78f832606c149'),
+        (kit / 'adapters/xnu_crypto.c', 'af24f73b42dbbd3d99d346fda62596bd2f6e525d7185d435a712b2b8a66d21b7'),
     ]
     for source, digest in original_sources:
         data = source.read_bytes().replace(b'\r\n', b'\n')
