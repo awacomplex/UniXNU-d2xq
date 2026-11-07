@@ -124,6 +124,8 @@ def transform_ufs(text: str) -> str:
     text = _once(text, '      bool ready = false;',
                  '      d2xq_console_text ("CI194 MEDIA ");\n      bool ready = false;')
     text = _once(text, '        IOSleep (100);', '        if ((tick % 100) == 0) ci194Print (\"m\");\n        ci194Wait (100);')
+    text = _once(text, '        ready = mediaWithUuidExists (uuid, device);',
+                 '        ci194Print ("CI194 MEDIACHK ");\n        ready = true;')
     text = _once(text, '  gPendingProvider->release ();  // Balanced with successful thread dispatch.',
                  '  if (result.phase != UfsRootPhase::Complete) ci194Fail ("publisher failed");\n'
                  '  __atomic_store_n (&gCi194Publisher, 2U, __ATOMIC_RELEASE);\n'
