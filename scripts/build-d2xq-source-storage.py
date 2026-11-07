@@ -199,15 +199,28 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    # CI192 is an independent, terminal read-only verifier.  Do not expand any
-    # ingest, progress-write or hardware-reset template into this kernel.
-    probe = (ROOT / 'scripts/ci192-final-readonly.inc').read_text()
-    hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
-    if probe.count(hash_marker) != 1:
-        sys.exit('CI192 chunk hash table marker missing')
-    probe = probe.replace(hash_marker, (ROOT / 'scripts/ci184-chunk-hashes.inc').read_text(), 1)
-    if '/* CI' in probe or 'CI192 FINAL READONLY PASS' not in probe:
-        sys.exit('CI192 final verifier expansion incomplete')
+    # CI193 can write only the fixed external policy extent.  It never expands
+    # an image-ingest, progress-write or reset path, and terminates after readback.
+    probe = (ROOT / 'scripts/ci193-policy-write.inc').read_text()
+    bindings = (ROOT / 'scripts/ci193-policy-bindings.inc').read_text()
+    binding_record = json.loads((ROOT / 'scripts/ci193-policy-bindings.json').read_text())
+    marker = '/* CI193_POLICY_BINDINGS */'
+    if probe.count(marker) != 1 or binding_record.get('mode') != 'policy-write':
+        sys.exit('CI193 policy binding marker or scope changed')
+    import hashlib
+    if hashlib.sha256(bindings.encode()).hexdigest() != binding_record['bindings_sha256']:
+        sys.exit('CI193 policy binding source digest mismatch')
+    if (binding_record['payload_bytes'] != 73293824 or
+        binding_record['target_first_lba'] != 0x44f800 or
+        binding_record['target_end_lba'] != 0x453de6 or
+        len(binding_record['policies']) != 2):
+        sys.exit('CI193 pinned policy geometry changed')
+    probe = probe.replace(marker, bindings, 1)
+    if '/* CI' in probe or 'CI193 POLICY WRITE PASS' not in probe:
+        sys.exit('CI193 policy writer expansion incomplete')
+    for obsolete in ('CI192', 'CI191', 'CI184 READY', 'reset_observed', 'resetDownload'):
+        if obsolete in probe:
+            sys.exit('CI193 includes an obsolete image/reset path: ' + obsolete)
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
