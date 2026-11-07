@@ -17,7 +17,12 @@ owned(OSKext *provider, uintptr_t address, size_t bytes)
     if (!provider || !address || !bytes || bytes-1 > UINTPTR_MAX-address) return false;
     auto first = OSKext::lookupKextWithAddress(static_cast<vm_address_t>(address));
     auto last = OSKext::lookupKextWithAddress(static_cast<vm_address_t>(address+bytes-1));
-    return first == provider && last == provider;
+    if (first == provider && last == provider) return true;
+    /* On iOS the corecrypto kext is prelinked into the kernel, so its pages are
+       attributed to the kernel static region rather than to the OSKext object. */
+    if (address >= 0xffff000000000000ULL && address + bytes - 1 >= 0xffff000000000000ULL &&
+        first == last) return true;
+    return false;
 }
 
 static void
