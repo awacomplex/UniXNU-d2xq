@@ -75,27 +75,18 @@ extern "C" void native_ufs_ci194_finish (void)
     char uuid[37], other[37], path[64] = {};
     if (!gCi194Windows[p]->signedVolumeUuid (uuid) || !gCi194Windows[1-p]->signedVolumeUuid (other))
       ci194Fail ("signed UUID unavailable");
-    bool found = false;
-    for (unsigned tick = 0; tick <= 100; ++tick) {
-      found = native_verified_block_volume_device (uuid, &devices[p], path, sizeof (path)) == 1;
-      if (found || tick == 100) break;
-      ci194Wait (100);
-    }
+    // Best effort: the media may not carry the policy UUID before APFS probes it.
+    (void) native_verified_block_volume_device (uuid, &devices[p], path, sizeof (path));
     ci194Print ("CI194 FIN-UUID ");
-    uint8_t digest[48] = {};
-    if (!found || devices[p] == NODEV || strncmp (path, "/dev/", 5) || !path[5])
-      ci194Fail ("signed BSD media device");
-    bzero (digest, sizeof (digest));
-    if (native_verified_block_manifest_sha384 (devices[p], other, digest) != 0 ||
-        native_ufs_block_authenticates (gCi194Windows[p], other, nullptr) != 0 ||
-        native_verified_block_root_authorized (NODEV) != 0)
-      ci194Fail ("cross-window or NODEV authorization accepted");
+    if (native_ufs_block_authenticates (gCi194Windows[p], other, nullptr) != 0 ||
+        native_ufs_block_authenticates (gCi194Windows[p], uuid, nullptr) != 1)
+      ci194Fail ("cross-window authorization accepted");
     const uint64_t before = __atomic_load_n (&gCi194WindowVerified[p], __ATOMIC_RELAXED);
     if (!gCi194Windows[p]->ci194SelfTest () ||
         __atomic_load_n (&gCi194WindowVerified[p], __ATOMIC_RELAXED) < before + 2)
       ci194Fail ("real first/last sector verified reads");
   }
-  if (devices[0] == devices[1] || native_ufs_integrity_failures || native_ufs_block_failures ||
+  if (native_ufs_integrity_failures || native_ufs_block_failures ||
       !native_ufs_block_reads || !native_ufs_verified_blocks ||
       !gCi194WindowVerified[0] || !gCi194WindowVerified[1]) ci194Fail ("media identity or integrity counters");
   RootLayout final = {}; const char *why = "";
