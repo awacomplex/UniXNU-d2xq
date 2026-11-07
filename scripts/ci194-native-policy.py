@@ -129,6 +129,7 @@ def transform_ufs(text: str) -> str:
     text = _once(text, '  gPendingProvider->release ();  // Balanced with successful thread dispatch.',
                  '  if (result.phase != UfsRootPhase::Complete) ci194Fail ("publisher failed");\n'
                  '  __atomic_store_n (&gCi194Publisher, 2U, __ATOMIC_RELEASE);\n'
+                 '  if (ci194DoneSem) semaphore_signal (ci194DoneSem);\n'
                  '  gPendingProvider->release ();  // Balanced with successful thread dispatch.')
     finish_anchor = '// Memory snapshot (native-ufs-probe=13):'
     text = _once(text, finish_anchor, '#if defined(NATIVE_VERIFIED_BLOCK) && NATIVE_VERIFIED_BLOCK\n' +
@@ -164,7 +165,8 @@ def transform_ufs(text: str) -> str:
                  '          !device->metaCast ("IOBlockStorageDevice") || !device->metaCast ("UniXNUBlockStorageDevice") ||\n'
                  '          !device->init (static_cast<OSDictionary *> (nullptr)) ||')
     text = _once(text, '      owner->retain ();\n      if (kernel_thread_start (publishThread, nullptr, &thread) != KERN_SUCCESS) {',
-                 '      if (__atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE)) return false;\n'
+                 '      ci194SemCreate ();\n'
+      '      if (__atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE)) return false;\n'
                  '      __atomic_store_n (&gCi194Publisher, 1U, __ATOMIC_RELEASE);\n'
                  '      owner->retain ();\n      if (kernel_thread_start (publishThread, nullptr, &thread) != KERN_SUCCESS) {')
     if 'verified_root_policies[index]' in text or 'CI193 POLICY BEGIN' in text:

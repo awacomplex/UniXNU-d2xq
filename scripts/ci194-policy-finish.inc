@@ -59,13 +59,14 @@ extern "C" void native_ufs_ci194_finish (void)
   const OSReturn loaded = OSKextLoadKextWithIdentifier ("com.apple.filesystems.apfs");
   if (loaded != kOSReturnSuccess) ci194Fail ("real APFS kext load");
   ci194Print ("CI194 FIN-APFSOK ");
-  for (unsigned tick = 0; __atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE) != 2; ++tick) {
-    if (tick == 400000) rootDiagnosticFailure ("CI194 publisher timeout");
-    if ((tick % 200000) == 0) ci194Print ("W");
-    ci194Transport (); ci194Wait (100);
+  if (ci194DoneSem) {
+    semaphore_wait (ci194DoneSem);
+  } else {
+    for (unsigned tick = 0; __atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE) != 2; ++tick) {
+      if (tick == 400000) rootDiagnosticFailure ("CI194 publisher timeout");
+      ci194Transport (); ci194Wait (100);
+    }
   }
-  ci194Print ("CI194 FIN-PUBWAIT ");
-  ci194Print ("CI194 FIN-PUB2 ");
   if (gPending != 2 || native_ufs_blocks_published != 2 || !gCi194PolicyLoaded[0] || !gCi194PolicyLoaded[1] ||
       !gCi194Windows[0] || !gCi194Windows[1] || gCi194Windows[0] == gCi194Windows[1])
     ci194Fail ("two authenticated windows not published");

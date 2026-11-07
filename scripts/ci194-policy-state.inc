@@ -1,4 +1,15 @@
 extern "C" void d2xq_console_text (const char *);
+extern "C" {
+extern task_t kernel_task;
+kern_return_t semaphore_create (task_t, semaphore_t *, int, int);
+kern_return_t semaphore_signal (semaphore_t);
+kern_return_t semaphore_wait (semaphore_t);
+}
+static semaphore_t ci194DoneSem = nullptr;
+static void ci194SemCreate (void)
+{
+  if (!ci194DoneSem) (void) semaphore_create (kernel_task, &ci194DoneSem, 0, 0);
+}
 // Included in the NativeUfs translation unit, after store/log declarations and
 // before NativeUfsBlock. All media reads use the already reviewed locked path.
 static bool gCi194Entered = false, gCi194LayoutStarted = false, gCi194FinishEntered = false;
