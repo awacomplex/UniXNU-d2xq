@@ -51,8 +51,10 @@ d2xq_ci194_crypto_ready(void)
     auto provider = OSKext::lookupKextWithIdentifier("com.apple.kec.corecrypto");
     if (!provider || !provider->isStarted()) panic("CI194 CRYPTO FAIL provider not started");
     crypto_functions_t table = g_crypto_funcs;
+    if (!table)
+        panic("CI194 CRYPTO FAIL crypto table not installed provider=%p", provider);
     if (!owned(provider,reinterpret_cast<uintptr_t>(table),sizeof(*table)))
-        panic("CI194 CRYPTO FAIL table owner");
+        panic("CI194 CRYPTO FAIL table owner table=%p provider=%p", table, provider);
     if (!owned(provider,reinterpret_cast<uintptr_t>(table->ccdigest_init_fn),4) ||
         !owned(provider,reinterpret_cast<uintptr_t>(table->ccdigest_update_fn),4) ||
         !owned(provider,reinterpret_cast<uintptr_t>(table->ccrsa_make_pub_fn),4) ||
