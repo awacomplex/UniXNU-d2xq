@@ -196,6 +196,10 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = (ROOT / 'scripts/ci184-guarded-ingest.inc').read_text()
+    readonly_marker = '/* CI186_READONLY_PROBE */'
+    if probe.count(readonly_marker) != 1:
+        sys.exit('CI186 readonly probe marker missing')
+    probe = probe.replace(readonly_marker, (ROOT / 'scripts/ci186-readonly-probe.inc').read_text(), 1)
     hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
     if probe.count(hash_marker) != 1:
         sys.exit('CI184 chunk hash table marker missing')
