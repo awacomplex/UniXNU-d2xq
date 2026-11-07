@@ -230,6 +230,7 @@ extern "C" void native_source_storage_ci194_validate(void)
 	}
 	d2xq_console_text("CI194 APFS LOADED ");
 	native_source_storage_start_internal(true);
+	d2xq_console_text("CI194 STARTED ");
 	// This validation build cannot continue into setconf/root mount, even if a
 	// provider unexpectedly violates its terminal contract.
 	native_ufs_ci194_finish();

@@ -51,15 +51,18 @@ extern "C" void native_ufs_ci194_finish (void)
 {
   if (!gCi194Entered || !gCi194LayoutStarted || gCi194FinishEntered) ci194Fail ("finish entry state");
   gCi194FinishEntered = true;
+  d2xq_console_text ("CI194 FIN ");
   ci194Transport ();
   // SourceStorage calls this only after the original bsd_autoconf has published
   // IOBSD, and before setconf/mountroot. This function never returns to them.
+  d2xq_console_text ("CI194 FIN-APFS ");
   const OSReturn loaded = OSKextLoadKextWithIdentifier ("com.apple.filesystems.apfs");
   if (loaded != kOSReturnSuccess) ci194Fail ("real APFS kext load");
   for (unsigned tick = 0; __atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE) != 2; ++tick) {
     if (tick == 650) ci194Fail ("normal publisher timeout");
     ci194Transport (); IOSleep (100);
   }
+  d2xq_console_text ("CI194 FIN-PUB2 ");
   if (gPending != 2 || native_ufs_blocks_published != 2 || !gCi194PolicyLoaded[0] || !gCi194PolicyLoaded[1] ||
       !gCi194Windows[0] || !gCi194Windows[1] || gCi194Windows[0] == gCi194Windows[1])
     ci194Fail ("two authenticated windows not published");
@@ -74,6 +77,7 @@ extern "C" void native_ufs_ci194_finish (void)
       if (found || tick == 100) break;
       IOSleep (100);
     }
+    d2xq_console_text ("CI194 FIN-UUID ");
     uint8_t digest[48] = {};
     if (!found || devices[p] == NODEV || strncmp (path, "/dev/", 5) || !path[5] ||
         native_verified_block_root_authorized (devices[p]) != 1 ||
@@ -92,6 +96,7 @@ extern "C" void native_ufs_ci194_finish (void)
       !native_ufs_block_reads || !native_ufs_verified_blocks ||
       !gCi194WindowVerified[0] || !gCi194WindowVerified[1]) ci194Fail ("media identity or integrity counters");
   RootLayout final = {}; const char *why = "";
+  d2xq_console_text ("CI194 FIN-SECT ");
   if (!findRootLayout (&final, &why, gHost.rootBlocks)) ci194Fail ("final root/GPT parse");
   ci194Snapshot (final, true);
   ci194Transport ();
