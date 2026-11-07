@@ -177,10 +177,20 @@ def audit_cache(data, slide, np):
             'Original PMGR slots 320/321 differ')
     require(struct.unpack('<Q', read(vptr + 340 * 8, 8))[0] == 0,
             'Original PMGR vtable no longer ends after slot 339')
+    def is_data_symbol(symbol):
+        if 'MetaClass' not in symbol and 'metaclass' not in symbol:
+            return False
+        # Constructors/destructors mention OSMetaClass in their parameter type but live in text.
+        for code in ('C1E', 'C2E', 'D0E', 'D1E', 'D2E'):
+            if code in symbol:
+                return False
+        return True
+
     bindings = {}
     for name, address in ORIGINAL.items():
-        segment = segment_for(address, 8 if 'MetaClass' in name or 'metaclass' in name else 4)
-        require(segment['name'] == ('__DATA' if 'MetaClass' in name or 'metaclass' in name else '__TEXT_EXEC'),
+        data_symbol = is_data_symbol(name)
+        segment = segment_for(address, 8 if data_symbol else 4)
+        require(segment['name'] == ('__DATA' if data_symbol else '__TEXT_EXEC'),
                 'Binding has wrong segment kind: ' + name)
         target = address + slide
         require(0 <= target < 1 << 64 and target % (8 if segment['name'] == '__DATA' else 4) == 0,
