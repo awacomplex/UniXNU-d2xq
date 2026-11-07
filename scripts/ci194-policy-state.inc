@@ -1,3 +1,4 @@
+extern "C" void d2xq_console_text (const char *);
 // Included in the NativeUfs translation unit, after store/log declarations and
 // before NativeUfsBlock. All media reads use the already reviewed locked path.
 static bool gCi194Entered = false, gCi194LayoutStarted = false, gCi194FinishEntered = false;
@@ -15,6 +16,15 @@ static NativeUfsBlock *gCi194Windows[2] = {};
 [[noreturn]] static void ci194Fail (const char *reason)
 {
   panic ("CI194 AUTHENTICATED WINDOWS FAIL %s", reason);
+}
+
+/* Two threads report progress; serialize the framebuffer console. */
+static volatile uint32_t ci194PrintLock;
+static void ci194Print (const char *text)
+{
+  while (__atomic_exchange_n (&ci194PrintLock, 1U, __ATOMIC_ACQUIRE)) { }
+  d2xq_console_text (text);
+  __atomic_store_n (&ci194PrintLock, 0U, __ATOMIC_RELEASE);
 }
 
 /* Timers can be unavailable this early; the CI194 waits busy-poll instead. */

@@ -120,10 +120,10 @@ def transform_ufs(text: str) -> str:
                  '  verifiedStorage = 0; verifiedStorageBytes = 0;')
     text = _once(text, '      IOLog ("NativeUfs: published %s\\n", device->windowLabel ());',
                  '      IOLog ("NativeUfs: published %s\\n", device->windowLabel ());\n'
-                 '      d2xq_console_text ("CI194 PUBWIN ");')
+                 '      ci194Print ("CI194 PUBWIN ");')
     text = _once(text, '      bool ready = false;',
                  '      d2xq_console_text ("CI194 MEDIA ");\n      bool ready = false;')
-    text = _once(text, '        IOSleep (100);', '        ci194Wait (100);')
+    text = _once(text, '        IOSleep (100);', '        if ((tick % 100) == 0) ci194Print (\"m\");\n        ci194Wait (100);')
     text = _once(text, '  gPendingProvider->release ();  // Balanced with successful thread dispatch.',
                  '  if (result.phase != UfsRootPhase::Complete) ci194Fail ("publisher failed");\n'
                  '  __atomic_store_n (&gCi194Publisher, 2U, __ATOMIC_RELEASE);\n'

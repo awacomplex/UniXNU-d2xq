@@ -35,7 +35,7 @@ bool NativeUfsBlock::configureVerification ()
   SHA256_CTX context; SHA256_Init (&context);
   const uint64_t blocks = (d.manifestBytes + 4095) / 4096;
   for (uint64_t index = 0; index < blocks; ++index) {
-    if ((index & 4095U) == 0) d2xq_console_text (selected ? "CI194 S ": "CI194 O ");
+    if ((index & 4095U) == 0) ci194Print (selected ? "CI194 S ": "CI194 O ");
     gRootDiagnostic.stage = "CI194 fixed policy READ10";
     if (hostRead4k (0, d.firstLba + index, 1, bounce) != kIOReturnSuccess) return reject ();
     const uint64_t relative = index * 4096;
@@ -71,6 +71,6 @@ bool NativeUfsBlock::configureVerification ()
   gCi194HashPointers[selected] = verified.hashes;
   gCi194Windows[selected] = this;
   gCi194PolicyLoaded[selected] = true;
-  d2xq_console_text (selected ? "CI194 SYSTEMOS SIGNATURE OK ": "CI194 OS SIGNATURE OK ");
+  ci194Print (selected ? "CI194 SYSTEMOS SIGNATURE OK ": "CI194 OS SIGNATURE OK ");
   return true;
 }
