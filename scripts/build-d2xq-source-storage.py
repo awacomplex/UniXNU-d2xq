@@ -113,6 +113,10 @@ def main():
     # d2xq: the board ADT does not publish /arm-io/ufshc yet, so fall back to
     # the driver's built-in SM8150 controller description instead of failing.
     ufs_text = native_ufs.read_text()
+    # CI189 relies on device/uncached IO mappings for PMIC, IMEM and PS_HOLD.
+    # Refuse a changed mapping policy rather than silently caching the reason.
+    if ufs_text.count('memory->map (kIOMapAnywhere | kIOMapInhibitCache)') != 1:
+        sys.exit('CI189 requires the reviewed uncached mapPhys implementation')
     missing = '''  if (!ufs) {
     IOLog ("NativeUfs: missing /arm-io/ufshc hardware description\\n");
     return false;
@@ -196,10 +200,16 @@ def main():
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
     probe = (ROOT / 'scripts/ci184-guarded-ingest.inc').read_text()
-    reset_probe_marker = '/* CI188_RESET_PROBE */'
+    reset_probe_marker = '/* CI189_RESET_PROBE */'
     if probe.count(reset_probe_marker) != 1:
-        sys.exit('CI188 reset probe marker missing')
-    probe = probe.replace(reset_probe_marker, (ROOT / 'scripts/ci188-reset-probe.inc').read_text(), 1)
+        sys.exit('CI189 reset probe marker missing')
+    reset_probe = (ROOT / 'scripts/ci189-reset-probe.inc').read_text()
+    hardware_marker = '/* CI189_RESET_HARDWARE */'
+    if reset_probe.count(hardware_marker) != 1:
+        sys.exit('CI189 reset hardware marker missing')
+    reset_probe = reset_probe.replace(hardware_marker,
+        (ROOT / 'scripts/ci189-reset-hardware.inc').read_text(), 1)
+    probe = probe.replace(reset_probe_marker, reset_probe, 1)
     hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
     if probe.count(hash_marker) != 1:
         sys.exit('CI184 chunk hash table marker missing')
