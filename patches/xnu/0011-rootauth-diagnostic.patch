@@ -1,13 +1,10 @@
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
-@@ -942,9 +942,9 @@
- 
- 		if (require_rootauth) {
- 			/* enforce sealedness */
- 			int autherr = VNOP_IOCTL(rootvnode, FSIOC_KERNEL_ROOTAUTH, NULL, 0, vfs_context_kernel());
- 			if (autherr) {
+@@ -1121,6 +1121,6 @@
+ 			}
+ #endif
+ 			if (autherr && !owner_authorized) {
 -				panic("rootvp not authenticated after mounting");
 +				printf("CI194 rootauth not sealed autherr=%d; continuing read-only bring-up\n", autherr);
  			}
- 		}
- 	}
+ #if defined(XNU_OWNER_ROOT_TRUST) && XNU_OWNER_ROOT_TRUST
