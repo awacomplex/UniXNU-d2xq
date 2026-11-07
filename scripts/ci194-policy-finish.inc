@@ -47,6 +47,25 @@ bool NativeUfsBlock::ci194SelfTest ()
   return result == kIOReturnNotWritable && !refused.done;
 }
 
+
+// IOMedia inherits no UUID from the block device; root matching needs one.
+static void ci194TagMedia (NativeUfsBlock *window, const char *uuid)
+{
+  OSString *value = OSString::withCString (uuid);
+  if (!value) return;
+  IORegistryIterator *media = IORegistryIterator::iterateOver (
+      window, gIOServicePlane, kIORegistryIterateRecursively);
+  if (media) {
+    while (IOService *entry = OSDynamicCast (IOService, media->getNextObject ())) {
+      OSString *klass = OSDynamicCast (OSString, entry->getProperty ("IOClass"));
+      if (klass && !strcmp (klass->getCStringNoCopy (), "IOMedia"))
+        entry->setProperty ("UUID", value);
+    }
+    media->release ();
+  }
+  value->release ();
+}
+
 extern "C" void native_ufs_ci194_finish (void)
 {
   if (!gCi194Entered || !gCi194LayoutStarted || gCi194FinishEntered) ci194Fail ("finish entry state");
@@ -75,7 +94,7 @@ extern "C" void native_ufs_ci194_finish (void)
     char uuid[37], other[37], path[64] = {};
     if (!gCi194Windows[p]->signedVolumeUuid (uuid) || !gCi194Windows[1-p]->signedVolumeUuid (other))
       ci194Fail ("signed UUID unavailable");
-    // Best effort: the media may not carry the policy UUID before APFS probes it.
+    ci194TagMedia (gCi194Windows[p], uuid);
     (void) native_verified_block_volume_device (uuid, &devices[p], path, sizeof (path));
     ci194Print ("CI194 FIN-UUID ");
     if (native_ufs_block_authenticates (gCi194Windows[p], other, nullptr) != 0 ||
