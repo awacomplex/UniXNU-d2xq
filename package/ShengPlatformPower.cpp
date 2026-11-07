@@ -16,7 +16,7 @@ void sheng_pmgr_static_init(void) __asm__("__GLOBAL__sub_I_ShengPlatformPower.cp
 IOService *d2xq_original_pmgr_nub_create(IORegistryEntry *, ApplePMGR *);
 uint32_t d2xq_original_pmgr_nub_read_aon(IOService *);
 void d2xq_original_pmgr_nub_write_aon(IOService *, uint64_t);
-extern const OSMetaClass d2xq_original_pmgr_nub_metaclass;
+extern const char d2xq_original_pmgr_nub_metaclass[];
 void d2xq_console_text(const char *);
 }
 
@@ -93,7 +93,7 @@ extern "C" int d2xq_ci194_pmgr_ready(void)
 {
     if (lifecycle != 2 || !aonChecked || !provider || !nub || !platform ||
         parentMeta != &ApplePMGR::gMetaClass ||
-        nubMeta != &d2xq_original_pmgr_nub_metaclass ||
+        nubMeta != reinterpret_cast<const OSMetaClass *>(d2xq_original_pmgr_nub_metaclass) ||
         lookup("ApplePMGR") != parentMeta || lookup("ApplePMGRNub") != nubMeta ||
         parentMeta->getClassSize() != sizeof(ApplePMGR) ||
         parentMeta->getSuperClass() != &IOPMGR::gMetaClass ||
@@ -156,7 +156,7 @@ extern "C" void sheng_pmgr_run(void)
     if (!parentMeta || parentMeta != &ApplePMGR::gMetaClass ||
         parentMeta->getClassSize() != sizeof(ApplePMGR) ||
         parentMeta->getSuperClass() != &IOPMGR::gMetaClass ||
-        !nubMeta || nubMeta != &d2xq_original_pmgr_nub_metaclass ||
+        !nubMeta || nubMeta != reinterpret_cast<const OSMetaClass *>(d2xq_original_pmgr_nub_metaclass) ||
         nubMeta->getClassSize() != 0x740 ||
         nubMeta->getSuperClass() != &IOService::gMetaClass) {
         panic("CI194 PMGR FAIL original class identity or layout");
