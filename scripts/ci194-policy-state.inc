@@ -17,6 +17,9 @@ static NativeUfsBlock *gCi194Windows[2] = {};
   panic ("CI194 AUTHENTICATED WINDOWS FAIL %s", reason);
 }
 
+/* Timers can be unavailable this early; the CI194 waits busy-poll instead. */
+static void ci194Wait (unsigned ms) { IODelay (ms * 1000U); }
+
 static void ci194Sha (const void *bytes, size_t length, uint8_t out[32])
 {
   SHA256_CTX context; SHA256_Init (&context); SHA256_Update (&context, bytes, length); SHA256_Final (out, &context);

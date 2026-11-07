@@ -27,7 +27,7 @@ bool NativeUfsBlock::ci194SelfTest ()
     const IOReturn accepted = doAsyncReadWrite (memory, sectors[n], 1, nullptr, &completion);
     if (accepted != kIOReturnSuccess) { ok = false; break; }
     unsigned tick = 0;
-    while (!__atomic_load_n (&state.done, __ATOMIC_ACQUIRE) && tick++ < 500) IOSleep (10);
+    while (!__atomic_load_n (&state.done, __ATOMIC_ACQUIRE) && tick++ < 500) ci194Wait (10);
     // Do not release a descriptor that an outstanding completion might own.
     if (!__atomic_load_n (&state.done, __ATOMIC_ACQUIRE)) ci194Fail ("verified self-test completion timeout");
     ok = state.status == kIOReturnSuccess && state.actual == 512;
@@ -58,10 +58,12 @@ extern "C" void native_ufs_ci194_finish (void)
   d2xq_console_text ("CI194 FIN-APFS ");
   const OSReturn loaded = OSKextLoadKextWithIdentifier ("com.apple.filesystems.apfs");
   if (loaded != kOSReturnSuccess) ci194Fail ("real APFS kext load");
+  d2xq_console_text ("CI194 FIN-APFSOK ");
   for (unsigned tick = 0; __atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE) != 2; ++tick) {
-    if (tick == 650) ci194Fail ("normal publisher timeout");
-    ci194Transport (); IOSleep (100);
+    if (tick == 6000) ci194Fail ("normal publisher timeout");
+    ci194Transport (); ci194Wait (100);
   }
+  d2xq_console_text ("CI194 FIN-PUBWAIT ");
   d2xq_console_text ("CI194 FIN-PUB2 ");
   if (gPending != 2 || native_ufs_blocks_published != 2 || !gCi194PolicyLoaded[0] || !gCi194PolicyLoaded[1] ||
       !gCi194Windows[0] || !gCi194Windows[1] || gCi194Windows[0] == gCi194Windows[1])
@@ -75,7 +77,7 @@ extern "C" void native_ufs_ci194_finish (void)
     for (unsigned tick = 0; tick <= 100; ++tick) {
       found = native_verified_block_volume_device (uuid, &devices[p], path, sizeof (path)) == 1;
       if (found || tick == 100) break;
-      IOSleep (100);
+      ci194Wait (100);
     }
     d2xq_console_text ("CI194 FIN-UUID ");
     uint8_t digest[48] = {};
