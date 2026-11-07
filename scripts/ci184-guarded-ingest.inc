@@ -81,7 +81,7 @@
       static uint8_t savedCounter[4096];
       memcpy (savedCounter, dma, sizeof (savedCounter));
       d2xq_console_text ("C1 ");
-      /* CI189_RESET_PROBE */
+      /* CI190_RESET_PROBE */
 
       readBlock (recoveryFirst + chunkBlocks, "metadata", 0);
       if (memcmp (dma, metadataMagic, sizeof (metadataMagic)) != 0)
