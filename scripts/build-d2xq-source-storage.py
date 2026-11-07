@@ -326,14 +326,17 @@ def main():
         (kit / 'adapters/xnu_crypto.c', '56926382a963d704cedbf96791391660e5346f5b409d8614aacc5fab7634c8b7'),
     ]
     for source, digest in original_sources:
-        if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
-            sys.exit('CI194 original VerifiedRoot implementation changed: ' + str(source))
+        data = source.read_bytes().replace(b'\r\n', b'\n')
+        if hashlib.sha256(data).hexdigest() != digest:
+            sys.exit('CI194 original VerifiedRoot implementation changed: ' + str(source) +
+                     ' sha256=' + hashlib.sha256(data).hexdigest())
     c_recipe = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/bsd_init.o.json'
     c_record = json.loads(c_recipe.read_text().strip().rstrip(','))
     policy_source = DEVICE / 'package/CI194PolicyData.cpp'
     policy_record = json.loads(policy_source.with_suffix('.json').read_text())
-    if hashlib.sha256(policy_source.read_text().encode()).hexdigest() != policy_record['policy_data_sha256']:
-        sys.exit('CI194 immutable policy source digest mismatch')
+    policy_bytes = policy_source.read_text().encode().replace(b'\r\n', b'\n')
+    if hashlib.sha256(policy_bytes).hexdigest() != policy_record['policy_data_sha256']:
+        sys.exit('CI194 immutable policy source digest mismatch sha256=' + hashlib.sha256(policy_bytes).hexdigest())
     if (policy_record['mode'] != 'authenticated-windows-readonly' or
         policy_record['real_policy_count'] != 2 or policy_record['private_key_included'] is not False):
         sys.exit('CI194 policy descriptor scope changed')
