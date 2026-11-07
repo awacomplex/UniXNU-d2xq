@@ -37,7 +37,7 @@ extern const uint8_t native_ufs_external_root_manifest_sha256[32];
 extern const uint8_t native_ufs_external_image_sha256[32];
 extern const uint8_t native_ufs_external_signed_headers[2][160];
 extern const uint8_t native_ufs_external_signatures[2][384];
-void native_ufs_ci194_finish(void) __attribute__((noreturn));
+void native_ufs_ci194_finish(void);
 #ifdef __cplusplus
 }
 #endif
