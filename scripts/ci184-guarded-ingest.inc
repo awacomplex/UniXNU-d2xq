@@ -81,7 +81,6 @@
       static uint8_t savedCounter[4096];
       memcpy (savedCounter, dma, sizeof (savedCounter));
       d2xq_console_text ("C1 ");
-      /* CI190_RESET_PROBE */
 
       readBlock (recoveryFirst + chunkBlocks, "metadata", 0);
       if (memcmp (dma, metadataMagic, sizeof (metadataMagic)) != 0)
@@ -229,6 +228,7 @@
       }
 
       uint64_t finalCounter = counter;
+      bool ci191IngestCommitted = false;
       if (!already) {
         if (mode == 2) finalCounter = (uint64_t) slot + 1;
         memset (savedCounter, 0, sizeof (savedCounter));
@@ -253,6 +253,7 @@
         readBlock (ctrLba, "counter verify", 0);
         if (memcmp (dma, savedCounter, sizeof (savedCounter)) != 0)
           panic ("CI184 FAIL counter verify slot=%u", slot);
+        ci191IngestCommitted = true;
         d2xq_console_text ("N1 ");
       }
       // Source and target were verified; the repair progress or append index
