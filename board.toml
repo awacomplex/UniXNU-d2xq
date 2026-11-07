@@ -121,7 +121,7 @@ loader = "firmware"
 title = "Boot UniXNU"
 timeout = -1
 dram_size = 0x300000000          # 12 GiB：DTB /memory 三段合计 0x0.39900000 + 0x2_00000000 + 0x0.c0000000
-panic_screen = true
+panic_screen = false   # d2xq patches the panic screen locally before packaging
 kernel_args = [
   "-v", "serial=3", "debug=0x14e",
   "-no_slto_panic",
