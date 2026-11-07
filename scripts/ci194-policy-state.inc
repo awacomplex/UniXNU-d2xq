@@ -28,7 +28,11 @@ static void ci194Print (const char *text)
 }
 
 /* Timers can be unavailable this early; the CI194 waits busy-poll instead. */
-static void ci194Wait (unsigned ms) { IODelay (ms * 1000U); }
+static void ci194Wait (unsigned ms)
+{
+  /* No clock dependency: a bounded yield loop still lets other threads run. */
+  for (unsigned i = 0; i < ms * 1000U; ++i) __asm__ volatile ("yield" ::: "memory");
+}
 
 static void ci194Sha (const void *bytes, size_t length, uint8_t out[32])
 {
