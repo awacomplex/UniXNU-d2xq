@@ -17,7 +17,7 @@ owned(OSKext *provider, uintptr_t address, size_t bytes)
     if (!provider || !address || !bytes || bytes-1 > UINTPTR_MAX-address) return false;
     auto first = OSKext::lookupKextWithAddress(static_cast<vm_address_t>(address));
     auto last = OSKext::lookupKextWithAddress(static_cast<vm_address_t>(address+bytes-1));
-    return first.get() == provider && last.get() == provider;
+    return first == provider && last == provider;
 }
 
 static void
@@ -46,15 +46,15 @@ d2xq_ci194_crypto_ready(void)
     auto provider = OSKext::lookupKextWithIdentifier("com.apple.kec.corecrypto");
     if (!provider || !provider->isStarted()) panic("CI194 CRYPTO FAIL provider not started");
     crypto_functions_t table = g_crypto_funcs;
-    if (!owned(provider.get(),reinterpret_cast<uintptr_t>(table),sizeof(*table)))
+    if (!owned(provider,reinterpret_cast<uintptr_t>(table),sizeof(*table)))
         panic("CI194 CRYPTO FAIL table owner");
-    if (!owned(provider.get(),reinterpret_cast<uintptr_t>(table->ccdigest_init_fn),4) ||
-        !owned(provider.get(),reinterpret_cast<uintptr_t>(table->ccdigest_update_fn),4) ||
-        !owned(provider.get(),reinterpret_cast<uintptr_t>(table->ccrsa_make_pub_fn),4) ||
-        !owned(provider.get(),reinterpret_cast<uintptr_t>(table->ccrsa_verify_pkcs1v15_fn),4))
+    if (!owned(provider,reinterpret_cast<uintptr_t>(table->ccdigest_init_fn),4) ||
+        !owned(provider,reinterpret_cast<uintptr_t>(table->ccdigest_update_fn),4) ||
+        !owned(provider,reinterpret_cast<uintptr_t>(table->ccrsa_make_pub_fn),4) ||
+        !owned(provider,reinterpret_cast<uintptr_t>(table->ccrsa_verify_pkcs1v15_fn),4))
         panic("CI194 CRYPTO FAIL dispatch owner");
-    requireDigest(provider.get(),table->ccsha256_di,32,32,64,sizeof(SHA256_CTX));
-    requireDigest(provider.get(),table->ccsha384_di,48,64,128,sizeof(SHA384_CTX));
+    requireDigest(provider,table->ccsha256_di,32,32,64,sizeof(SHA256_CTX));
+    requireDigest(provider,table->ccsha384_di,48,64,128,sizeof(SHA384_CTX));
     static const uint8_t sha256abc[32] = {
         0xba,0x78,0x16,0xbf,0x8f,0x01,0xcf,0xea,0x41,0x41,0x40,0xde,0x5d,0xae,0x22,0x23,
         0xb0,0x03,0x61,0xa3,0x96,0x17,0x7a,0x9c,0xb4,0x10,0xff,0x61,0xf2,0x00,0x15,0xad
