@@ -17,10 +17,6 @@ CONFIG_XNU_SHENG_PMGR=y
 
 # Owner root/cache bring-up: mount the SystemOS signed window as the dyld cache
 # source before launchd so the shared cache and system libraries are present.
-CONFIG_XNU_NATIVE_UFS_OWNER_ROOT=y
-CONFIG_XNU_OWNER_ROOT_AUDIT=y
-CONFIG_XNU_OWNER_ROOT_TRUST=y
 CONFIG_XNU_OWNER_CACHE_MOUNT=y
 CONFIG_XNU_OWNER_CACHE_STARTUP=y
-CONFIG_XNU_OWNER_BOOT_MANIFEST=y
 CONFIG_XNU_OWNER_CACHE_VOLUME_UUID="8846FE78-2910-4297-AF97-D59BB6F8FC16"
