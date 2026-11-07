@@ -162,7 +162,7 @@ def audit_cache(data, slide, np):
         return matches[0]
 
     # Constructor's actual vtable formation and original provider class size.
-    words(0xfffffff0059f0058, (0x900d7088, 0x911b6108, 0xf9000008))
+    words(0xfffffff0059f0058, (0xd0009788, 0x911b6108, 0xf9000008))
     words(0xfffffff0059f01cc, (0x52971503, 0x72a00083))
     words(0xfffffff005a22588, (0x5280e801,))  # Original factory allocation size 0x740.
     words(0xfffffff005a22660, (0xf9004660,))  # Nub's private provider field at +0x88.
