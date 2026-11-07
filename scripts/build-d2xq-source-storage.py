@@ -14,7 +14,6 @@ at boot. This builder:
 
 The runtime side lives in package/SourceStorage.cpp (called from bsd_init).
 """
-import hashlib
 import json
 import os
 import shutil
@@ -200,35 +199,15 @@ def main():
     if begin < 0 or end < 0 or end < begin:
         sys.exit('root check panic anchor missing')
     end += len('layout->manifestStatus, layout->windows);')
-    probe = (ROOT / 'scripts/ci184-guarded-ingest.inc').read_text()
-    if '/* CI190_RESET_PROBE */' in probe:
-        sys.exit('CI191 must not intercept normal ingest with the reset-only probe')
+    # CI192 is an independent, terminal read-only verifier.  Do not expand any
+    # ingest, progress-write or hardware-reset template into this kernel.
+    probe = (ROOT / 'scripts/ci192-final-readonly.inc').read_text()
     hash_marker = '/* CI184_CHUNK_HASH_TABLE */'
     if probe.count(hash_marker) != 1:
-        sys.exit('CI184 chunk hash table marker missing')
+        sys.exit('CI192 chunk hash table marker missing')
     probe = probe.replace(hash_marker, (ROOT / 'scripts/ci184-chunk-hashes.inc').read_text(), 1)
-    reset_marker = '/* CI184_SUCCESS_HOOK */'
-    if probe.count(reset_marker) != 1:
-        sys.exit('CI184 success hook marker missing')
-    reset_success = (ROOT / 'scripts/ci191-reset-success.inc').read_text()
-    hardware_marker = '/* CI191_RESET_HARDWARE */'
-    if reset_success.count(hardware_marker) != 1:
-        sys.exit('CI191 reset hardware marker missing')
-    # Keep the real-device-tested CI190 hardware file frozen.  Only its caller
-    # authorization and diagnostic names change for committed normal ingest.
-    hardware = (ROOT / 'scripts/ci190-reset-hardware.inc').read_text()
-    if hashlib.sha256(hardware.encode()).hexdigest() != 'ca9607a237c9887f0dad4580462ef6e40c8cbbd9e11e11eb7fc7577adab8d120':
-        sys.exit('CI191 requires the exact reviewed CI190 reset hardware')
-    old_gate = ('// Only the trusted-counter + durably consumed RECOVERY-arm path enters.\n'
-                '        if (!ci190ArmConsumed || !repairCounter || counter != 7 || nextRepairSlot != 2)')
-    new_gate = ('// Only the freshly committed normal-ingest transaction enters.\n'
-                '        if (!ci191IngestCommitted)')
-    if hardware.count(old_gate) != 1:
-        sys.exit('CI191 source authorization gate anchor changed')
-    hardware = hardware.replace(old_gate, new_gate, 1)
-    hardware = hardware.replace('ci190', 'ci191').replace('CI190', 'CI191')
-    reset_success = reset_success.replace(hardware_marker, hardware, 1)
-    probe = probe.replace(reset_marker, reset_success, 1)
+    if '/* CI' in probe or 'CI192 FINAL READONLY PASS' not in probe:
+        sys.exit('CI192 final verifier expansion incomplete')
     ufs_text = ufs_text[:begin] + probe + ufs_text[end:]
     ufs_text = ufs_text.replace('hostWrite (0x20, 1);', 'hostWrite (0x20, 0xffffffffU);')
     ufs_text = ufs_text.replace('attempt < 20', 'attempt < 3')
