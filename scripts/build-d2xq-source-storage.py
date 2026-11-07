@@ -228,7 +228,7 @@ def main():
     if layout.is_file():
         text = layout.read_text()
         if 'kDataMax = 131072' in text:
-            layout.write_text(text.replace('kDataMax = 131072', 'kDataMax = 4096'))
+            layout.write_text(text.replace('kDataMax = 131072', 'kDataMax = 16384'))
 
     # Keep the command path quiet: per-command framebuffer output made the
     # 32768-command copy too slow to diagnose from the screen.
