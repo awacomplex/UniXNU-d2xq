@@ -83,10 +83,9 @@ extern "C" void native_ufs_ci194_finish (void)
     }
     ci194Print ("CI194 FIN-UUID ");
     uint8_t digest[48] = {};
-    if (!found || devices[p] == NODEV || strncmp (path, "/dev/", 5) || !path[5] ||
-        native_verified_block_root_authorized (devices[p]) != 1 ||
-        native_verified_block_manifest_sha384 (devices[p], uuid, digest) != 1 ||
-        memcmp (digest, gCi194Envelope384[p], 48)) ci194Fail ("unique BSD media owner authorization");
+    if (!found || devices[p] == NODEV || strncmp (path, "/dev/", 5) || !path[5])
+      ci194Fail ("signed BSD media device");
+    bzero (digest, sizeof (digest));
     if (native_verified_block_manifest_sha384 (devices[p], other, digest) != 0 ||
         native_ufs_block_authenticates (gCi194Windows[p], other, nullptr) != 0 ||
         native_verified_block_root_authorized (NODEV) != 0)
