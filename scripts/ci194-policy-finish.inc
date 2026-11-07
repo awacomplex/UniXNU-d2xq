@@ -60,7 +60,7 @@ extern "C" void native_ufs_ci194_finish (void)
   if (loaded != kOSReturnSuccess) ci194Fail ("real APFS kext load");
   ci194Print ("CI194 FIN-APFSOK ");
   for (unsigned tick = 0; __atomic_load_n (&gCi194Publisher, __ATOMIC_ACQUIRE) != 2; ++tick) {
-    if (tick == 2000000) ci194Fail ("normal publisher timeout");
+    if (tick == 400000) rootDiagnosticFailure ("CI194 publisher timeout");
     if ((tick % 200000) == 0) ci194Print ("W");
     ci194Transport (); ci194Wait (100);
   }
