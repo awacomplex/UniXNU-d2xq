@@ -139,7 +139,7 @@ psci_method = "smc"
 # 不设则不加 darwinboot-memory-size，XNU 用默认内存配置）
 # P4b 暂不设 root_match_volume_uuid（不引导 root，避免全 0 UUID 误匹配）
 packed_data_ramdisk = true
-unique_chip_id = "required"
+unique_chip_id = "0x0000000012345678"
 
 [[bootimg.dtb_node]]
 path = "/reserved-memory/splash_region"
