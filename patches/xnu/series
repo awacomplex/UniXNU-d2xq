@@ -12,3 +12,4 @@
 0010-ci194-root-validation.patch
 ci194-platform-power.patch
 0011-rootauth-diagnostic.patch
+0012-initproc-cache-status.patch

@@ -67,6 +67,21 @@ static void ci194TagMedia (NativeUfsBlock *window, const char *uuid)
 }
 
 
+
+static void ci194TagThread (void *, wait_result_t)
+{
+  // IOMedia appears asynchronously after registerService; keep tagging it so the
+  // cache mount and root matching can find the signed UUID at any later point.
+  for (unsigned round = 0; round < 600; ++round) {
+    for (unsigned p = 0; p < 2; ++p) {
+      NativeUfsBlock *window = gCi194Windows[p];
+      char uuid[37];
+      if (window && window->signedVolumeUuid (uuid)) ci194TagMedia (window, uuid);
+    }
+    ci194Wait (100);
+  }
+}
+
 extern "C" void native_ufs_ci194_finish (void)
 {
   if (!gCi194Entered || !gCi194LayoutStarted || gCi194FinishEntered) ci194Fail ("finish entry state");
@@ -115,6 +130,10 @@ extern "C" void native_ufs_ci194_finish (void)
   ci194Snapshot (final, true);
   ci194Transport ();
   ci194Print ("CI194 AUTHENTICATED WINDOWS PASS ");
+  {
+    thread_t tagger = nullptr;
+    if (kernel_thread_start (ci194TagThread, nullptr, &tagger) == KERN_SUCCESS) thread_deallocate (tagger);
+  }
   ci194Print ("CI194 RETURNING ");
   __asm__ volatile ("" ::: "memory");
   return;
