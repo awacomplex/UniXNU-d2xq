@@ -29,10 +29,12 @@ CONFIG_XNU_OWNER_DATA_VOLUME_UUID="E7A1F88D-37AF-4B42-AD61-3ECFBE328374"
 # Typed RAM block provider (persistent-store backed Data volume)
 CONFIG_XNU_NATIVE_RAM_BLOCK=y
 CONFIG_XNU_NATIVE_AES=y
-CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
 
 # Real crypto / AMFI support (as the working gts7xlwifi reference)
 CONFIG_XNU_SOURCE_CORECRYPTO14=y
 CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 CONFIG_XNU_SOURCE_PTHREAD=y
 CONFIG_XNU_DT_PANIC_REGION=y
+# The dyld cache carrier authorizes the shared-region file mapping of the
+# SystemOS cache volume (vm_unix.c), as the non-union offline owner path expects.
+CONFIG_XNU_OWNER_CACHE_CARRIER=y
