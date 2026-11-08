@@ -3,33 +3,25 @@
 # soc:configs/sm8150.config、os:configs/ipados.config），这里只放设备级覆盖/追加。
 # TODO(P1): 从 d2xq 内核仓库 arch/arm64/configs/ 的厂商 defconfig 摘取设备特有项
 # TODO(P2): SM8150 专用组件开发完成后，在此追加设备级 CONFIG
-
 # UFS 存储（ShengUfs/NativeUfs，SM8150 personality 已在 pinned 版本中）
 CONFIG_XNU_NATIVE_UFS=y
 # 构建并链接存储 archive（NativeUfs/RamBlock/VirtioMmioBlock）
-
-
 # 存储 archive：构建并链接 NativeUfs/RamBlock/VirtioMmioBlock（需要 IOStorageFamily 源/绑定）
 CONFIG_XNU_BUILD_ARCHIVES=y
-
 # CI194 uses the original ApplePMGR provider/nub before readonly APFS probing.
 CONFIG_XNU_SHENG_PMGR=y
-
 # Owner root/cache bring-up: mount the SystemOS signed window as the dyld cache
 # source before launchd so the shared cache and system libraries are present.
 CONFIG_XNU_OWNER_CACHE_MOUNT=y
 CONFIG_XNU_OWNER_CACHE_STARTUP=y
 CONFIG_XNU_OWNER_CACHE_VOLUME_UUID="8846FE78-2910-4297-AF97-D59BB6F8FC16"
-
 # Data volume bring-up: mount the packed Data seed at /private/var.
 CONFIG_XNU_OWNER_BOOT_MANIFEST=y
 CONFIG_XNU_OWNER_DATA_MOUNT=y
 CONFIG_XNU_OWNER_DATA_VOLUME_UUID="E7A1F88D-37AF-4B42-AD61-3ECFBE328374"
-
 # Typed RAM block provider (persistent-store backed Data volume)
 CONFIG_XNU_NATIVE_RAM_BLOCK=y
 CONFIG_XNU_NATIVE_AES=y
-
 # Real crypto / AMFI support (as the working gts7xlwifi reference)
 CONFIG_XNU_SOURCE_CORECRYPTO14=y
 CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
@@ -38,3 +30,4 @@ CONFIG_XNU_DT_PANIC_REGION=y
 # The dyld cache carrier authorizes the shared-region file mapping of the
 # SystemOS cache volume (vm_unix.c), as the non-union offline owner path expects.
 CONFIG_XNU_OWNER_CACHE_CARRIER=y
+CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
