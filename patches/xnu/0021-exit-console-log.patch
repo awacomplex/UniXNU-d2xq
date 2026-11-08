@@ -1,5 +1,5 @@
 diff --git a/bsd/kern/kern_exit.c b/bsd/kern/kern_exit.c
-index f904fdf..4c253ec 100644
+index f904fdf..4e24df7 100644
 --- a/bsd/kern/kern_exit.c
 +++ b/bsd/kern/kern_exit.c
 @@ -1849,7 +1849,7 @@ proc_handle_critical_exit(proc_t p, int rv)
@@ -11,16 +11,20 @@ index f904fdf..4c253ec 100644
  #endif
  
  	if (p == initproc) {
-@@ -1863,6 +1863,14 @@ proc_handle_critical_exit(proc_t p, int rv)
+@@ -1863,6 +1863,18 @@ proc_handle_critical_exit(proc_t p, int rv)
  			extern volatile dev_t native_owner_cache_selected_device, native_owner_cache_mounted_device;
  			snprintf(prefix_str_buf, sizeof(prefix_str_buf), "initproc failed to start [stage=%d status=%d mount=%d auth=%d ro=%d sel=%d mnt=%d]", native_owner_cache_stage, native_owner_cache_status, native_owner_cache_mount_status, native_owner_cache_authorized, native_owner_cache_readonly, (int)native_owner_cache_selected_device, (int)native_owner_cache_mounted_device);
  			prefix_str = prefix_str_buf;
 +			{
 +				extern char ci194_console_log[];
 +				extern unsigned int ci194_console_len;
++				const char *ci194_tail = ci194_console_log;
 +				size_t ci194_used = strlen(prefix_str_buf);
-+				if (ci194_used + 16 < sizeof(prefix_str_buf)) {
-+					snprintf(prefix_str_buf + ci194_used, sizeof(prefix_str_buf) - ci194_used, " log=[%s]", ci194_console_log);
++				if (ci194_console_len > 200) {
++					ci194_tail = ci194_console_log + (ci194_console_len - 200);
++				}
++				if (ci194_used + 32 < sizeof(prefix_str_buf)) {
++					snprintf(prefix_str_buf + ci194_used, sizeof(prefix_str_buf) - ci194_used, " log=[%s]", ci194_tail);
 +				}
 +			}
  		}
