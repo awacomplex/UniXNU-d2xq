@@ -1,0 +1,11 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -8075,7 +8075,7 @@
+ 	boot_progress_stage("SystemOS mount enter");
+ 	int cache_error = native_owner_cache_prepare(p, (user_addr_t)scratch_addr, &init_envp);
+ 	boot_progress_stage("SystemOS mount returned");
+-	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error);
++	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error); else { vnode_t cv = NULLVP; int e[4]; e[0] = vnode_lookup("/usr/lib/system/libsystem_kernel.dylib", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } e[1] = vnode_lookup("/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } e[2] = vnode_lookup("/usr/lib", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } e[3] = vnode_lookup("/System/Library", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } panic("CI194 CACHEPROBE5 %d %d %d %d union=%d", e[0], e[1], e[2], e[3], native_owner_cache_native_union); }
+ #endif
+ #if defined(XNU_OWNER_DATA_MOUNT) && XNU_OWNER_DATA_MOUNT
+ 	boot_progress_stage("Data mount enter");
