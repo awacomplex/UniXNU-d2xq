@@ -52,8 +52,12 @@ static void ci194Sha (const void *bytes, size_t length, uint8_t out[32])
 
 static void ci194Transport (void)
 {
-  if (!gHost.ready || gHost.poisoned || gQueue.installed || gStoreOpen || gLogOpen ||
-      gStoreRegionBlocks || gLogRegionBlocks || storeMode () || logMode ())
+  // The persistent Data store keeps the transport writable by design (mode 2);
+  // only the diagnostic log and the other store modes stay refused.
+  const bool dataStore = storeMode () == 2;
+  if (!gHost.ready || gHost.poisoned || gQueue.installed || gLogOpen || gLogRegionBlocks ||
+      logMode () || (storeMode () == 1) ||
+      (!dataStore && (gStoreOpen || gStoreRegionBlocks)))
     ci194Fail ("nonexclusive or writable transport");
 }
 
