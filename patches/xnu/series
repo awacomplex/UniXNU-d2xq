@@ -14,5 +14,4 @@ ci194-platform-power.patch
 0011-rootauth-diagnostic.patch
 0012-initproc-cache-status.patch
 0013-data-mount-stage.patch
-0014-cache-path-probe.patch
 0015-ux-crash-diag.patch
