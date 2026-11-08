@@ -1,0 +1,18 @@
+--- a/bsd/uxkern/ux_exception.c
++++ b/bsd/uxkern/ux_exception.c
+@@ -125,7 +125,14 @@
+ 	}
+ 
+ 	/* Translate exception and code to signal type */
+-	int ux_signal = ux_exception(exception, code, subcode);
++	int ux_signal = ux_exception(exception, code, subcode);
++
++	if (p->p_pid == 1) {
++		char dbg[160];
++		snprintf(dbg, sizeof dbg, "CI194 UX exc=%d code=%llx sub=%llx sig=%d", exception,
++		    (unsigned long long)code, (unsigned long long)subcode, ux_signal);
++		d2xq_console_text(dbg);
++	}
+ 
+ 	uthread_t ut = get_bsdthread_info(thread);
+ 
