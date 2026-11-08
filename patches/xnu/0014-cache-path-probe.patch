@@ -1,0 +1,11 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -8075,7 +8075,7 @@
+ 	boot_progress_stage("SystemOS mount enter");
+ 	int cache_error = native_owner_cache_prepare(p, (user_addr_t)scratch_addr, &init_envp);
+ 	boot_progress_stage("SystemOS mount returned");
+-	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error);
++	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error); else { vnode_t cv = NULLVP; int ce = vnode_lookup("/private/preboot/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); int found = cv != NULLVP; if (cv) vnode_put(cv); panic("CI194 CACHEPROBE err=%d found=%d", ce, found); }
+ #endif
+ #if defined(XNU_OWNER_DATA_MOUNT) && XNU_OWNER_DATA_MOUNT
+ 	boot_progress_stage("Data mount enter");
