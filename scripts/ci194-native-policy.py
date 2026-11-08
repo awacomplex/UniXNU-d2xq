@@ -95,12 +95,11 @@ def transform_ufs(text: str) -> str:
     text, count = queue.subn('      if (gQueue.installed) {\n        *why = "CI194 unexpected runtime queue";\n        gHost.ready = false;\n        return false;\n      }', text)
     if count != 1: raise ValueError('CI194 pinned runtimeQueueStart call changed')
     # Exported write APIs are refused even if somebody passes altered bootargs.
-    for name in ('native_ufs_store_open', 'native_ufs_log_open'):
+    for name in ('native_ufs_log_open',):
         text = _body(text, 'extern "C" int ' + name + ' (',
                      '  if (why) *why = "CI194 read-only mode";\n  return 0;')
-    for name in ('native_ufs_store_read', 'native_ufs_store_write', 'native_ufs_store_sync',
-                 'native_ufs_log_write', 'native_ufs_export_write', 'native_ufs_log_sync', 'native_ufs_log_panic_write'):
-        text = _body(text, 'extern "C" int ' + name + ' (', '  return 0; // CI194 refuses persistent store/log/export.')
+    for name in ('native_ufs_log_write', 'native_ufs_export_write', 'native_ufs_log_sync', 'native_ufs_log_panic_write'):
+        text = _body(text, 'extern "C" int ' + name + ' (', '  return 0; // CI194 refuses the diagnostic log/export.')
     text = _body(text, 'extern "C" uint64_t native_ufs_export_blocks (', '  return 0;')
     text = _once(text, '// One read-only window of the root image as a block device:',
                  (HERE / 'ci194-policy-state.inc').read_text() + '\n// One read-only window of the root image as a block device:')
@@ -141,7 +140,7 @@ def transform_ufs(text: str) -> str:
                     '  PE_parse_boot_argn ("native-ufs-probe", &ci194Probe, sizeof (ci194Probe));\n'
                     '  PE_parse_boot_argn ("native-ufs-discover", &ci194Discover, sizeof (ci194Discover));\n'
                     '  if (ci194 != 1 || ci194Root != 1 || ci194Probe || ci194Discover ||\n'
-                    '      gCi194Entered || storeMode () || logMode () || gQueue.installed || gStoreOpen || gLogOpen)\n'
+                    '      gCi194Entered || (storeMode () != 2) || logMode () || gQueue.installed || gStoreOpen || gLogOpen)\n'
                     '    ci194Fail ("mode, repeated entry, or writable state");\n'
                     '  gCi194Entered = true; d2xq_ufs_stage = -1;\n')
     text = _once(text, '  gRootDiagnosticEnabled = diagnostic == 1;',
