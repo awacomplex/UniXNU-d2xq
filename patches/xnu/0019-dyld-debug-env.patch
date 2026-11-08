@@ -1,0 +1,21 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -7099,6 +7099,18 @@
+ native_owner_cache_prepare(proc_t p, user_addr_t scratch, user_addr_t *envp)
+ {
+ #ifndef XNU_OWNER_CACHE_VOLUME_UUID
++#if defined(XNU_OWNER_UNION_SYSTEMOS) && XNU_OWNER_UNION_SYSTEMOS
++	if (init_envp == USER_ADDR_NULL) {
++		const char *dyld_print = "DYLD_PRINT_LIBRARIES=1";
++		const char *dyld_segments = "DYLD_PRINT_SEGMENTS=1";
++		user64_addr_t env_vector[3] = {(user_addr_t)scratch_addr + 0x400, (user_addr_t)scratch_addr + 0x600, USER_ADDR_NULL};
++		if (copyout(dyld_print, (user_addr_t)scratch_addr + 0x400, strlen(dyld_print) + 1) == 0 &&
++		    copyout(dyld_segments, (user_addr_t)scratch_addr + 0x600, strlen(dyld_segments) + 1) == 0 &&
++		    copyout(env_vector, (user_addr_t)scratch_addr + 0x500, sizeof(env_vector)) == 0) {
++			init_envp = (user_addr_t)scratch_addr + 0x500;
++		}
++	}
++#endif
+ #define XNU_OWNER_CACHE_VOLUME_UUID "8846FE78-2910-4297-AF97-D59BB6F8FC16"
+ #endif
+ 	const char *volume = XNU_OWNER_CACHE_VOLUME_UUID;
