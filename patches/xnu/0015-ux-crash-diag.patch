@@ -1,12 +1,13 @@
 --- a/bsd/uxkern/ux_exception.c
 +++ b/bsd/uxkern/ux_exception.c
-@@ -125,7 +125,14 @@
+@@ -125,7 +125,15 @@
  	}
  
  	/* Translate exception and code to signal type */
 -	int ux_signal = ux_exception(exception, code, subcode);
 +	int ux_signal = ux_exception(exception, code, subcode);
 +
++	extern void d2xq_console_text(const char *);
 +	if (p->p_pid == 1) {
 +		char dbg[160];
 +		snprintf(dbg, sizeof dbg, "CI194 UX exc=%d code=%llx sub=%llx sig=%d", exception,
