@@ -15,4 +15,5 @@ ci194-platform-power.patch
 0012-initproc-cache-status.patch
 0013-data-mount-stage.patch
 0015-ux-crash-diag.patch
-0016-union-path-probe.patch
+0017-text-repage.patch
+0018-sandbox-grant-entitlement.patch

@@ -1,0 +1,36 @@
+diff --git a/osfmk/vm/vm_fault.c b/osfmk/vm/vm_fault.c
+--- a/osfmk/vm/vm_fault.c
++++ b/osfmk/vm/vm_fault.c
+@@ -7805,6 +7805,17 @@ vm_page_validate_cs_mapped_slow(
+ 	if (validated == VMP_CS_ALL_TRUE && tainted == VMP_CS_ALL_FALSE &&
+ 	    cs_text_fixup_page(vnode, mo_offset, (void *)phystokv((pmap_paddr_t)VM_PAGE_GET_PHYS_PAGE(page) << PAGE_SHIFT)) != 0) {
+ 		cache_sync_page(VM_PAGE_GET_PHYS_PAGE(page));
++#if CHECK_CS_VALIDATION_BITMAP
++		/* The vnode bitmap survives eviction of this physical page. Its
++		 * validated bit would accept original file bytes on the next page-in
++		 * without reaching this fixup. Resident pages retain their validated
++		 * state; reloaded pages validate the signed bytes and apply the fixup.
++		 */
++		vnode_pager_cs_check_validation_bitmap(object->pager,
++		    mo_offset,
++		    CS_BITMAP_CLEAR);
++#endif
++		return;
+ 	}
+ #endif
+ 
+diff --git a/bsd/kern/ubc_subr.c b/bsd/kern/ubc_subr.c
+--- a/bsd/kern/ubc_subr.c
++++ b/bsd/kern/ubc_subr.c
+@@ -6209,8 +6209,9 @@ cs_text_fixup_page(struct vnode *vp, memory_object_offset_t page_offset, void *kva)
+ 		}
+ 		memcpy(at, f->replacement, f->length);
+ 		written++;
+-		if (os_atomic_inc(&cs_text_fixup_applied, relaxed) <= 16) {
+-			printf("text-fixup: %s+0x%llx (%u bytes) applied\n", f->name, f->offset, f->length);
++		uint32_t application = os_atomic_inc(&cs_text_fixup_applied, relaxed);
++		if (application <= 128) {
++			printf("text-fixup: %s+0x%llx (%u bytes) applied (total=%u)\n", f->name, f->offset, f->length, application);
+ 		}
+ 	}
+ 	return written;

@@ -1,0 +1,30 @@
+--- a/iokit/Kernel/IOUserClient.cpp
++++ b/iokit/Kernel/IOUserClient.cpp
+@@ -4338,6 +4338,27 @@
+ static bool
+ native_sandbox_grant(IOService * service)
+ {
++	/* gts7xlwifi: or any process signed with the entitlement the service names (NativeSandboxGrantEntitlement), as SM-T733 grants
++	 * com.apple.security.ts.opengl-or-metal: the wallpaper posters and widget renderers carry it and need the GPU like the render server. */
++	OSString * entitlements = OSDynamicCast(OSString, service->getProperty("NativeSandboxGrantEntitlement"));
++	if (entitlements) {
++		/* A comma-separated list; any one of them grants. */
++		char one[96];
++		for (const char * at = entitlements->getCStringNoCopy(); *at;) {
++			size_t length = 0;
++			while (at[length] && at[length] != ',') {
++				++length;
++			}
++			if (length && length < sizeof(one)) {
++				memcpy(one, at, length);
++				one[length] = 0;
++				if (IOCurrentTaskHasEntitlement(one)) {
++					return true;
++				}
++			}
++			at += length + (at[length] == ',' ? 1 : 0);
++		}
++	}
+ 	OSString * list = OSDynamicCast(OSString, service->getProperty("NativeSandboxGrantProcess"));
+ 	char name[17] = {};
+ 	if (!list) {
