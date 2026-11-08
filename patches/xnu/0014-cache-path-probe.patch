@@ -5,7 +5,7 @@
  	int cache_error = native_owner_cache_prepare(p, (user_addr_t)scratch_addr, &init_envp);
  	boot_progress_stage("SystemOS mount returned");
 -	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error);
-+	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error); else { vnode_t cv = NULLVP; int ce = vnode_lookup("/private/preboot/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); int found = cv != NULLVP; if (cv) vnode_put(cv); panic("CI194 CACHEPROBE err=%d found=%d", ce, found); }
++	if (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error); else { vnode_t cv = NULLVP; int e1 = vnode_lookup("/private/preboot/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } int e2 = vnode_lookup("/private/preboot/SystemOS/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } int e3 = vnode_lookup("/private/preboot/System/Library/dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } int e4 = vnode_lookup("/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64e", 0, &cv, vfs_context_current()); if (cv) { vnode_put(cv); cv = NULLVP; } panic("CI194 CACHEPROBE2 %d %d %d %d", e1, e2, e3, e4); }
  #endif
  #if defined(XNU_OWNER_DATA_MOUNT) && XNU_OWNER_DATA_MOUNT
  	boot_progress_stage("Data mount enter");
