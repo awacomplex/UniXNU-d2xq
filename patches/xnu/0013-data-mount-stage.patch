@@ -1,8 +1,11 @@
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -7402,4 +7402,4 @@
+@@ -8073,7 +8073,7 @@
+ #endif
+ #if defined(XNU_OWNER_DATA_MOUNT) && XNU_OWNER_DATA_MOUNT
  	int data_error = native_owner_data_prepare(p, (user_addr_t)scratch_addr);
 -	if (data_error) panic("offline scratch Data mount failed: %d", data_error);
 +	if (data_error) panic("offline scratch Data mount failed: %d stage=%d status=%d dev=%d base=%lx size=%lx", data_error, native_owner_data_stage, native_owner_data_status, (int)native_owner_data_device, native_owner_data_seed_base, native_owner_data_seed_size);
  #endif
  #if CONFIG_MEMORYSTATUS
+ 	(void) memorystatus_init_at_boot_snapshot();
