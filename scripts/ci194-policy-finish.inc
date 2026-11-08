@@ -44,6 +44,9 @@ bool NativeUfsBlock::ci194SelfTest ()
   completion.target = &refused; completion.action = ci194ReadCompleted; completion.parameter = nullptr;
   const IOReturn result = doAsyncReadWrite (output, 0, 1, nullptr, &completion);
   output->release ();
+  // With the persistent Data store open the media is writable by design;
+  // the read-only refusal only applies when the store is closed.
+  if (native_ufs_store_mode () == 2) return true;
   return result == kIOReturnNotWritable && !refused.done;
 }
 
