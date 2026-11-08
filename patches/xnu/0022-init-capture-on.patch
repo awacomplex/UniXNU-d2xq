@@ -1,13 +1,13 @@
 diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
-index e545e22..0a5f392 100644
+index e545e22..8237feb 100644
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -8115,6 +8115,8 @@ load_init_program(proc_t p)
+@@ -7939,6 +7939,8 @@ load_init_program_at_path(proc_t p, user_addr_t scratch_addr, const char* path,
+ {
+ 	int retval[2];
+ 	int error;
++	extern int ci194_console_capture;
++	ci194_console_capture = 1;
+ 	struct execve_args init_exec_args;
+ 	user_addr_t argv0 = USER_ADDR_NULL, argv1 = USER_ADDR_NULL;
  
- 		if (is_release_suffix) {
- 			printf("load_init_program: attempting to load /sbin/launchd\n");
-+			extern int ci194_console_capture;
-+			ci194_console_capture = 1;
- 			error = load_init_program_at_path(p, (user_addr_t)scratch_addr, "/sbin/launchd", init_envp);
- 			if (!error) {
- 				return;
