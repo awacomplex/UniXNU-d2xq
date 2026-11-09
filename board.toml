@@ -75,6 +75,8 @@ archives = [
   # the real VerifiedRoot provider for CONFIG_XNU_VERIFIED_ROOT_ARCHIVE.
   "build-owner-os-policy.py",
   "build-verified-root-probe.py --component os --include-systemos",
+  "build-arm-driver.py VirtioMmioBlock --verified-root --verified-root-bundle",
+  "build-storage-bindings.py --object build/virtio-mmio-block-verified-bundle/NativeVirtioBlock.o --archive libVirtioMmioBlock.a --provided-by build/sheng-ufs/bindings.json",
   "build-d2xq-source-storage.py",
   "build-d2xq-platform-power.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
