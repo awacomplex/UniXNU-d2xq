@@ -87,6 +87,7 @@ archives = [
   # The RAM block transport shares the virtio block bindings (same IOStorageFamily imports).
   "build-arm-driver.py RamBlock",
   "build-storage-bindings.py --object build/ram-block/NativeRamBlock.o --archive libRamBlock.a --provided-by build/d2xq-source-storage/bindings.json",
+  "name-audit-objects.py --tree .",
   "build-d2xq-platform-power.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
   # build-virtio-mmio-bindings.py 需要 build/storage-abi/interface-audit.json，
