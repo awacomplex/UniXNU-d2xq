@@ -31,6 +31,9 @@ if len(found) != 1:
 entities = found[0]['system-entities']
 whole = [e['dev-entry'] for e in entities if e.get('content-hint') == 'GUID_partition_scheme']
 if len(whole) != 1:
+    # Cryptex1,SystemOS is a bare APFS container without a partition scheme.
+    whole = [entities[0]['dev-entry']] if entities else []
+if len(whole) != 1:
     raise SystemExit('Require one actual whole virtual media mapping')
 info = plistlib.loads(subprocess.check_output(['diskutil', 'info', '-plist', whole[0]]))
 volume_info = plistlib.loads(subprocess.check_output(['diskutil', 'info', '-plist', volume]))
