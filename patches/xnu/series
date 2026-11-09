@@ -21,5 +21,4 @@ ci194-platform-power.patch
 0021-exit-console-log.patch
 0022-init-capture-on.patch
 0023-console-write-capture.patch
-0024-carrier-stats.patch
 0025-early-screen-log.patch
