@@ -73,6 +73,7 @@ archives = [
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
   # Verified root: sign/verify the original OS and SystemOS policies, then bundle
   # the real VerifiedRoot provider for CONFIG_XNU_VERIFIED_ROOT_ARCHIVE.
+  "build-verified-root-host.py",
   "build-owner-os-policy.py",
   "build-owner-systemos-policy.py",
   "build-verified-root-probe.py --component os --include-systemos",
