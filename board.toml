@@ -71,6 +71,10 @@ archives = [
   "component:ShengUfs",
   # 源构建块存储运行时：编译公开 IOBlockStorageDevice（改名晚注册）+ NativeUfs/NativeRamBlock
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
+  # Verified root: sign/verify the original OS and SystemOS policies, then bundle
+  # the real VerifiedRoot provider for CONFIG_XNU_VERIFIED_ROOT_ARCHIVE.
+  "build-owner-os-policy.py",
+  "build-verified-root-probe.py --component os --include-systemos",
   "build-d2xq-source-storage.py",
   "build-d2xq-platform-power.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）

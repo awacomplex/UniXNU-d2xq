@@ -30,3 +30,7 @@ CONFIG_XNU_DT_PANIC_REGION=y
 # The dyld cache carrier authorizes the shared-region file mapping of the
 # SystemOS cache volume (vm_unix.c), as the non-union offline owner path expects.
 CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
+CONFIG_XNU_VERIFIED_ROOT_PROBE=y
+CONFIG_XNU_OWNER_ROOT_AUDIT=y
+CONFIG_XNU_OWNER_ROOT_TRUST=y
+CONFIG_XNU_VERIFIED_ROOT_ARCHIVE="{tree}/build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a"
