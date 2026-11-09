@@ -73,7 +73,7 @@ archives = [
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
   # Verified root: sign/verify the original OS and SystemOS policies, then bundle
   # the real VerifiedRoot provider for CONFIG_XNU_VERIFIED_ROOT_ARCHIVE.
-  "prepare-target-volumes.py --tree .",
+  "prepare-target-volumes.py --tree . --ipsw-url https://updates.cdn-apple.com/2025SpringFCS/fullrestores/122-77166/DCA6CFE8-90E9-4B92-880D-3DE171798E40/iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw",
   "build-verified-root-host.py --tree .",
   "build-owner-os-policy.py",
   "build-owner-systemos-policy.py",

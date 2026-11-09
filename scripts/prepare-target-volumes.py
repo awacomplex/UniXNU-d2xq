@@ -21,11 +21,21 @@ COMPONENTS = (("OS", "os-mount"), ("Cryptex1,SystemOS", "systemos-mount"))
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--tree", type=Path, required=True)
 parser.add_argument("--ipsw", type=Path, default=Path(os.environ.get("UNIXNU_IPSW", "")))
+parser.add_argument("--ipsw-url", default="")
 args = parser.parse_args()
 tree = args.tree.resolve()
 ipsw = args.ipsw
 if not ipsw or not ipsw.is_file():
-    sys.exit("Pass --ipsw or set UNIXNU_IPSW to the iPad7,1 iPadOS 17.7.11 restore")
+    url = args.ipsw_url or os.environ.get("UNIXNU_IPSW", "")
+    if not url:
+        sys.exit("Pass --ipsw/--ipsw-url or set UNIXNU_IPSW to the iPad7,1 iPadOS 17.7.11 restore")
+    cache = tree / ".cache/firmware/ipsw"
+    cache.mkdir(parents=True, exist_ok=True)
+    ipsw = cache / Path(url).name
+    if not ipsw.is_file():
+        temporary = ipsw.with_suffix(".partial")
+        subprocess.run(["curl", "-L", "--retry", "3", "-o", str(temporary), url], check=True)
+        temporary.rename(ipsw)
 
 targets = tree / ".cache/firmware/target-volumes"
 targets.mkdir(parents=True, exist_ok=True)
