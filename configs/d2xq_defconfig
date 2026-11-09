@@ -30,3 +30,4 @@ CONFIG_XNU_DT_PANIC_REGION=y
 # The dyld cache carrier authorizes the shared-region file mapping of the
 # SystemOS cache volume (vm_unix.c), as the non-union offline owner path expects.
 CONFIG_XNU_OWNER_CACHE_CARRIER=y
+CONFIG_XNU_OWNER_UNION_SYSTEMOS=y

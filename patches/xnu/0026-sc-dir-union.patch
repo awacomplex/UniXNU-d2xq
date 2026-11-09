@@ -1,0 +1,18 @@
+diff --git a/bsd/vm/vm_unix.c b/bsd/vm/vm_unix.c
+index 8696353..bde4f01 100644
+--- a/bsd/vm/vm_unix.c
++++ b/bsd/vm/vm_unix.c
+@@ -2609,6 +2609,13 @@ after_root_check:
+ 					scdir_vp = NULL;
+ 					goto scdir_ok;
+ 				}
++			/* Owner union composition: the cache directory is on the process root,
++			 * so the underlying vnodes may differ from the looked-up parent. */
++			if (vnode_mount(srfmp->vp) == vnode_mount(scdir_vp)) {
++				(void)vnode_put(scdir_vp);
++				scdir_vp = NULL;
++				goto scdir_ok;
++			}
+ 				(void)vnode_put(scdir_vp);
+ 				scdir_vp = NULL;
+ 			}

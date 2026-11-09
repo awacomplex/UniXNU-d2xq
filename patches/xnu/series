@@ -23,3 +23,4 @@ ci194-platform-power.patch
 0023-console-write-capture.patch
 0024-carrier-stats.patch
 0025-early-screen-log.patch
+0026-sc-dir-union.patch
