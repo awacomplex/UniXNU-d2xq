@@ -24,3 +24,4 @@ ci194-platform-power.patch
 0024-carrier-stats.patch
 0025-early-screen-log.patch
 0026-sc-dir-union.patch
+0027-map-steps.patch

@@ -1,0 +1,17 @@
+diff --git a/bsd/vm/vm_unix.c b/bsd/vm/vm_unix.c
+index 8696353..afd6883 100644
+--- a/bsd/vm/vm_unix.c
++++ b/bsd/vm/vm_unix.c
+@@ -2639,9 +2639,12 @@ scdir_ok:
+ 			goto done;
+ 		}
+ 		srfmp->file_size = fs;
++	{ extern void d2xq_console_text(const char *); char b[48]; int n = snprintf(b, sizeof b, "CI194 M2 size=%llx\n", (unsigned long long)fs); if (n > 0) d2xq_console_text(b); }
+ 
+ 		/* get the file's memory object handle */
++		{ extern void d2xq_console_text(const char *); d2xq_console_text("CI194 M3 object enter\n"); }
+ 		srfmp->file_control = ubc_getobject(srfmp->vp, UBC_HOLDOBJECT);
++		{ extern void d2xq_console_text(const char *); d2xq_console_text("CI194 M4 object done\n"); }
+ 		if (srfmp->file_control == MEMORY_OBJECT_CONTROL_NULL) {
+ 			SHARED_REGION_TRACE_ERROR(
+ 				("shared_region: %p [%d(%s)] map(%p:'%s'): "
