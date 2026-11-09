@@ -78,9 +78,12 @@ archives = [
   "build-owner-os-policy.py",
   "build-owner-systemos-policy.py",
   "build-verified-root-probe.py --component os --include-systemos",
-  "build-arm-driver.py VirtioMmioBlock --verified-root --verified-root-bundle",
-  "build-storage-bindings.py --object build/virtio-mmio-block-verified-bundle/NativeVirtioBlock.o --archive libVirtioMmioBlock.a --provided-by build/sheng-ufs/bindings.json",
   "build-d2xq-source-storage.py",
+  # Bind the source-built storage driver's IOStorageFamily imports, then the verified
+  # virtio block driver's, sharing the same recorded original addresses.
+  "build-storage-bindings.py --object build/d2xq-source-storage/NativeUfs.o --archive libD2xqStorageBindings.a",
+  "build-arm-driver.py VirtioMmioBlock --verified-root --verified-root-bundle",
+  "build-storage-bindings.py --object build/virtio-mmio-block-verified-bundle/NativeVirtioBlock.o --archive libVirtioMmioBlock.a --provided-by build/d2xq-source-storage/bindings.json",
   "build-d2xq-platform-power.py",
   # UFS 存储（ShengUfs 组件，repository 指向 fork 的 sm8150 分支，含 kSm8150Ufs）
   # build-virtio-mmio-bindings.py 需要 build/storage-abi/interface-audit.json，
