@@ -6,9 +6,9 @@ index 2249bc6..05a39a3 100644
  static void     ttyecho(int c, struct tty *tp);
  static int      ttyoutput(int c, struct tty *tp);
  static void     ttypend(struct tty *tp);
-+char ci194_console_log[4096];
-+unsigned int ci194_console_len;
-+int ci194_console_capture;
++extern char ci194_console_log[4096];
++extern unsigned int ci194_console_len;
++extern int ci194_console_capture;
  static void     ttyretype(struct tty *tp);
  static void     ttyrub(int c, struct tty *tp);
  static void     ttyrubo(struct tty *tp, int count);
