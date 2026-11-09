@@ -19,7 +19,6 @@ ci194-platform-power.patch
 0018-sandbox-grant-entitlement.patch
 0019-dyld-debug-env.patch
 0020-console-capture.patch
-0021-exit-console-log.patch
 0022-init-capture-on.patch
 0023-console-write-capture.patch
 0025-early-screen-log.patch
