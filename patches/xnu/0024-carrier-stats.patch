@@ -1,0 +1,22 @@
+diff --git a/bsd/kern/kern_exit.c b/bsd/kern/kern_exit.c
+index 4e24df7..89c6f3b 100644
+--- a/bsd/kern/kern_exit.c
++++ b/bsd/kern/kern_exit.c
+@@ -1862,6 +1862,17 @@ proc_handle_critical_exit(proc_t p, int rv)
+ 			extern volatile int native_owner_cache_authorized, native_owner_cache_readonly;
+ 			extern volatile dev_t native_owner_cache_selected_device, native_owner_cache_mounted_device;
+ 			snprintf(prefix_str_buf, sizeof(prefix_str_buf), "initproc failed to start [stage=%d status=%d mount=%d auth=%d ro=%d sel=%d mnt=%d]", native_owner_cache_stage, native_owner_cache_status, native_owner_cache_mount_status, native_owner_cache_authorized, native_owner_cache_readonly, (int)native_owner_cache_selected_device, (int)native_owner_cache_mounted_device);
++			{
++				extern unsigned long native_owner_cache_carrier_accepts, native_owner_cache_carrier_rejects;
++				extern volatile dev_t native_owner_cache_carrier_root_device, native_owner_cache_carrier_file_device;
++				size_t ci194_used2 = strlen(prefix_str_buf);
++				if (ci194_used2 + 128 < sizeof(prefix_str_buf)) {
++					snprintf(prefix_str_buf + ci194_used2, sizeof(prefix_str_buf) - ci194_used2,
++					    " carrier=[a=%lu r=%lu rd=%d fd=%d]", native_owner_cache_carrier_accepts,
++					    native_owner_cache_carrier_rejects, (int)native_owner_cache_carrier_root_device,
++					    (int)native_owner_cache_carrier_file_device);
++				}
++			}
+ 			prefix_str = prefix_str_buf;
+ 			{
+ 				extern char ci194_console_log[];
