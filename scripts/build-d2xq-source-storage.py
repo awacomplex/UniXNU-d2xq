@@ -303,7 +303,7 @@ def main():
 
     record = load_record()
     objects = []
-    for source in (base_source, native_ufs, native_ram, source_storage):
+    for source in (base_source, native_ufs, source_storage):
         symbol = source.name
         obj = OUT / (source.stem + '.o')
         extra = (ufs_include, DEVICE / 'package', ROOT / 'kits/VerifiedRoot/include',
@@ -317,41 +317,9 @@ def main():
             sys.exit((result.stdout + result.stderr)[-4000:])
         objects.append(late_object(obj, symbol))
 
-    # Preserve the original C verifier and XNU adapter without an alternate
-    # probe mode. Put exactly one real provider in the already force-loaded
-    # storage archive, alongside small public descriptors and readiness checks.
-    kit = ROOT / 'kits/VerifiedRoot'
-    original_sources = [
-        (kit / 'src/verified_root.c', 'd3a07258f96664c24764e429a860a47998b28475b945c1ba2ec78f832606c149'),
-        (kit / 'adapters/xnu_crypto.c', 'af24f73b42dbbd3d99d346fda62596bd2f6e525d7185d435a712b2b8a66d21b7'),
-    ]
-    for source, digest in original_sources:
-        data = source.read_bytes().replace(b'\r\n', b'\n')
-        if hashlib.sha256(data).hexdigest() != digest:
-            sys.exit('CI194 original VerifiedRoot implementation changed: ' + str(source) +
-                     ' sha256=' + hashlib.sha256(data).hexdigest())
-    c_recipe = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/bsd_init.o.json'
-    c_record = json.loads(c_recipe.read_text().strip().rstrip(','))
-    policy_source = DEVICE / 'package/CI194PolicyData.cpp'
-    policy_record = json.loads(policy_source.with_suffix('.json').read_text())
-    policy_bytes = policy_source.read_text().encode().replace(b'\r\n', b'\n')
-    if hashlib.sha256(policy_bytes).hexdigest() != policy_record['policy_data_sha256']:
-        sys.exit('CI194 immutable policy source digest mismatch sha256=' + hashlib.sha256(policy_bytes).hexdigest())
-    if (policy_record['mode'] != 'authenticated-windows-readonly' or
-        policy_record['real_policy_count'] != 2 or policy_record['private_key_included'] is not False):
-        sys.exit('CI194 policy descriptor scope changed')
-    provider_sources = [p for p, _ in original_sources] + [policy_source, DEVICE / 'package/CI194Crypto.cpp']
-    for source in provider_sources:
-        obj = OUT / (source.stem + '.o')
-        recipe = c_record if source.suffix == '.c' else record
-        command = compile_command(recipe, source, obj,
-                                  (kit / 'include', DEVICE / 'package', ROOT / 'drivers/VirtioMmioBlock'))
-        result = subprocess.run(command, cwd=recipe['directory'], capture_output=True, text=True)
-        (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
-        if result.returncode:
-            sys.exit((result.stdout + result.stderr)[-6000:])
-        objects.append(obj)
-
+    # VerifiedRoot and the immutable policy data now come from
+    # build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a, and NativeRamBlock
+    # from build/ram-block; keep this archive to UFS plus the runtime glue.
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
