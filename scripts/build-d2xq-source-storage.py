@@ -370,9 +370,15 @@ def main():
         if result.returncode:
             sys.exit((result.stdout + result.stderr)[-4000:])
         objects.append(obj)
+    # The build gates require CONFIG_XNU_VERIFIED_ROOT_ARCHIVE to exist; the real
+    # verifier objects are already in this archive, so the file stays empty.
+    placeholder = ROOT / 'build/verified-root-xnu/libVerifiedRootProbe.a'
+    placeholder.parent.mkdir(parents=True, exist_ok=True)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
+    placeholder.unlink(missing_ok=True)
+    subprocess.run([ar, 'rcs', str(placeholder)], check=True)
     ARCHIVE.unlink(missing_ok=True)
     subprocess.run([ar, 'rcs', str(ARCHIVE), *map(str, objects)], check=True)
     # The UFS link force-loads the catalog archive; the RAM link force-loads its own.
