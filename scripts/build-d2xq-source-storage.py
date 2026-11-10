@@ -334,6 +334,25 @@ def main():
     if policy_result.returncode:
         sys.exit((policy_result.stdout + policy_result.stderr)[-4000:])
     objects.append(policy_obj)
+    crypto_source = DEVICE / 'package/CI194Crypto.cpp'
+    crypto_obj = OUT / 'CI194Crypto.o'
+    crypto_command = compile_command(record, crypto_source, crypto_obj,
+                                      (DEVICE / 'package', ROOT / 'kits/VerifiedRoot/include'))
+    crypto_result = subprocess.run(crypto_command, cwd=record['directory'], capture_output=True, text=True)
+    (OUT / 'CI194Crypto.log').write_text(crypto_result.stdout + crypto_result.stderr)
+    if crypto_result.returncode:
+        sys.exit((crypto_result.stdout + crypto_result.stderr)[-4000:])
+    objects.append(crypto_obj)
+    # The catalog archive's late object keeps the compiler-emitted static initialiser
+    # of the RamBlock translation unit as an external reference; the RAM transport now
+    # lives in libRamBlock.a, so provide the empty initialiser here.
+    stub_source = OUT / 'native-ramblock-init.S'
+    stub_source.write_text('.text\n.globl __GLOBAL__sub_I_NativeRamBlock.cpp\n'
+                           '__GLOBAL__sub_I_NativeRamBlock.cpp:\n\tret\n')
+    stub_obj = OUT / 'native-ramblock-init.o'
+    subprocess.run(['clang', '-target', 'arm64-apple-ios17.0', '-c', str(stub_source),
+                    '-o', str(stub_obj)], check=True)
+    objects.append(stub_obj)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
