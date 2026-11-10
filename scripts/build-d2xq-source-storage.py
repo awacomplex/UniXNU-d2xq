@@ -320,6 +320,20 @@ def main():
     # VerifiedRoot and the immutable policy data now come from
     # build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a, and NativeRamBlock
     # from build/ram-block; keep this archive to UFS plus the runtime glue.
+    policy_source = DEVICE / 'package/CI194PolicyData.cpp'
+    policy_record = json.loads(policy_source.with_suffix('.json').read_text())
+    policy_bytes = policy_source.read_text().encode().replace(b'\r\n', b'\n')
+    if hashlib.sha256(policy_bytes).hexdigest() != policy_record['policy_data_sha256']:
+        sys.exit('CI194 immutable policy source digest mismatch')
+    policy_obj = OUT / 'CI194PolicyData.o'
+    policy_command = compile_command(record, policy_source, policy_obj,
+                                      (DEVICE / 'package', ROOT / 'kits/VerifiedRoot/include',
+                                       ROOT / 'drivers/VirtioMmioBlock'))
+    policy_result = subprocess.run(policy_command, cwd=record['directory'], capture_output=True, text=True)
+    (OUT / 'CI194PolicyData.log').write_text(policy_result.stdout + policy_result.stderr)
+    if policy_result.returncode:
+        sys.exit((policy_result.stdout + policy_result.stderr)[-4000:])
+    objects.append(policy_obj)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
