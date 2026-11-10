@@ -356,6 +356,20 @@ def main():
     subprocess.run(['clang', '-target', 'arm64-apple-ios17.0', '-c', str(stub_source),
                     '-o', str(stub_obj)], check=True)
     objects.append(stub_obj)
+    # Compact VerifiedRoot implementation (the embedded-manifest probe archive is
+    # not linked: the policies stay in CI194PolicyData and in the SHNGROOT windows).
+    kit = ROOT / 'kits/VerifiedRoot'
+    c_recipe = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/bsd_init.o.json'
+    c_record = json.loads(c_recipe.read_text().strip().rstrip(','))
+    for relative in ('src/verified_root.c', 'adapters/xnu_crypto.c'):
+        source = kit / relative
+        obj = OUT / (source.stem + '.o')
+        command = compile_command(c_record, source, obj, (kit / 'include',))
+        result = subprocess.run(command, cwd=c_record['directory'], capture_output=True, text=True)
+        (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
+        if result.returncode:
+            sys.exit((result.stdout + result.stderr)[-4000:])
+        objects.append(obj)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
