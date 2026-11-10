@@ -3,7 +3,7 @@
   "mode": "authenticated-windows-readonly",
   "ci193_binding_sha256": "429a0a4747ad728d4e4e54a98ca64212974b284f329ee7a04f97149252c97d64",
   "independent_C_report_sha256": "ff44fb7b307f96245d5452bcf013afce71691ac772ca21988bc94938d1ffc399",
-  "policy_data_sha256": "17c5db61160fd8f8403a623344fbd25649f9438ff80ab895c94fafd2f9a0c566",
+  "policy_data_sha256": "8afb5262b73fea11ee49ee29b96c301cdca14d77af56d6d566d2d69a9f2f0155",
   "trusted_key_sha256": "3dc03f5d256dfbc961633d0e7810a714f147c808462c068aa40b99994da873ae",
   "external_descriptor_bytes": 136,
   "legacy_descriptor_bytes": 16,
