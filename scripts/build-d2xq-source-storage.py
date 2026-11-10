@@ -364,7 +364,7 @@ def main():
     # The kernel link re-audits this archive's object hash against bindings.json;
     # the RAM transport shares every original storage binding with the virtio one.
     audited = ram_dir / 'RamBlock.o'
-    shutil.copyfile(OUT / 'native-ramblock-init.o', audited)
+    shutil.copyfile(OUT / 'NativeRamBlock.o', audited)
     (ram_dir / 'bindings.json').write_text(json.dumps({
         'compiled_object_sha256': hashlib.sha256(audited.read_bytes()).hexdigest(),
         'bindings': {},
