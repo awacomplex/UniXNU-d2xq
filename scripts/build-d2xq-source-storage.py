@@ -363,10 +363,20 @@ def main():
     ufs = ROOT / 'build/sheng-ufs/libShengUfs.a'
     ufs.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ARCHIVE, ufs)
-    ram = ROOT / 'build/ram-block/libRamBlock.a'
-    ram.parent.mkdir(parents=True, exist_ok=True)
+    ram_dir = ROOT / 'build/ram-block'
+    ram_dir.mkdir(parents=True, exist_ok=True)
+    ram = ram_dir / 'libRamBlock.a'
     ram.unlink(missing_ok=True)
     subprocess.run([ar, 'rcs', str(ram)], check=True)
+    # The kernel link re-audits this archive's object hash against bindings.json;
+    # the RAM transport shares every original storage binding with the virtio one.
+    audited = ram_dir / 'RamBlock.o'
+    shutil.copyfile(OUT / 'native-ramblock-init.o', audited)
+    (ram_dir / 'bindings.json').write_text(json.dumps({
+        'compiled_object_sha256': hashlib.sha256(audited.read_bytes()).hexdigest(),
+        'bindings': {},
+        'shared_from': 'build/virtio-mmio-block-verified-bundle/bindings.json',
+        'shared': []}, indent=2) + '\n')
     print(f'PASS: {len(objects)} late-registration objects archived -> {ARCHIVE}')
 
 

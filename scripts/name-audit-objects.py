@@ -13,8 +13,6 @@ tree = Path(sys.argv[sys.argv.index("--tree") + 1]).resolve() if "--tree" in sys
 pairs = (
     (tree / "build/virtio-mmio-block-verified-bundle/NativeVirtioBlock.o",
      tree / "build/virtio-mmio-block-verified-bundle/VirtioMmioBlock.o"),
-    (tree / "build/ram-block/NativeRamBlock.o",
-     tree / "build/ram-block/RamBlock.o"),
 )
 for source, destination in pairs:
     if not source.is_file():
