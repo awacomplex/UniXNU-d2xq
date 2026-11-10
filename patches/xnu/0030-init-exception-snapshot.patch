@@ -1,0 +1,55 @@
+--- a/bsd/uxkern/ux_exception.c
++++ b/bsd/uxkern/ux_exception.c
+@@ -44,6 +44,11 @@
+ #include <sys/vmparam.h>        /* MAXSSIZ */
+ 
+ #include <sys/ux_exception.h>
++#include <arm/thread.h>
++#include <mach/arm/thread_status.h>
++
++/* Last init exception, retained until the existing critical-exit panic. */
++char ci244_init_exception[256] = "not observed";
+ 
+ /*
+  * Translate Mach exceptions to UNIX signals.
+@@ -129,10 +134,18 @@
+ 
+ 	extern void d2xq_console_text(const char *);
+ 	if (p->p_pid == 1) {
+-		char dbg[160];
+-		snprintf(dbg, sizeof dbg, "CI194 UX exc=%d code=%llx sub=%llx sig=%d", exception,
+-		    (unsigned long long)code, (unsigned long long)subcode, ux_signal);
+-		d2xq_console_text(dbg);
++		arm_saved_state_t *state = get_user_regs(thread);
++		unsigned long long pc = 0, lr = 0, sp = 0;
++		if (state) {
++			pc = (unsigned long long)get_saved_state_pc(state);
++			lr = (unsigned long long)get_saved_state_lr(state);
++			sp = (unsigned long long)get_saved_state_sp(state);
++		}
++		snprintf(ci244_init_exception, sizeof(ci244_init_exception),
++		    "exc=%d code=%llx fault=%llx sig=%d pc=%llx lr=%llx sp=%llx",
++		    exception, (unsigned long long)code, (unsigned long long)subcode,
++		    ux_signal, pc, lr, sp);
++		d2xq_console_text(ci244_init_exception);
+ 	}
+ 
+ 	uthread_t ut = get_bsdthread_info(thread);
+--- a/bsd/kern/kern_exit.c
++++ b/bsd/kern/kern_exit.c
+@@ -1865,6 +1865,15 @@
+ 		prefix_str = prefix_str_buf;
+ 	}
+ 
++	/* Carry the exception snapshot in the final panic instead of a transient row. */
++	char ci244_prefix[512];
++	if (p == initproc) {
++		extern char ci244_init_exception[256];
++		snprintf(ci244_prefix, sizeof(ci244_prefix), "%s\nCI244 UX=[%s]",
++		    prefix_str, ci244_init_exception);
++		prefix_str = ci244_prefix;
++	}
++
+ 	proc_crash_coredump(p);
+ 
+ 	sync(p, (void *)NULL, (int *)NULL);

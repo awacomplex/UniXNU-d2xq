@@ -23,3 +23,4 @@ ci194-platform-power.patch
 0025-early-screen-log.patch
 0028-cnputs-capture.patch
 0029-map-entry.patch
+0030-init-exception-snapshot.patch
