@@ -1,25 +1,14 @@
 # d2xq XNU patch series — 设备级补丁（每行一个，按应用顺序）
 # TODO(P1): 从 SM7325/SM8550 参考移植 SM8150 平台补丁后在此列出
 0001-bzero-no-dc-zva.patch
-0002-pmap-probe.patch
 0003-oskext-summary-realloc.patch
 0004-ipi-noop-nonapple.patch
 0005-smp-skip-aic-pmgr.patch
-0006-smp-stage-markers.patch
-0007-smp-early-markers.patch
-0008-exec-magic-probe.patch
 0009-d2xqfs.patch
 0010-ci194-root-validation.patch
 ci194-platform-power.patch
 0012-initproc-cache-status.patch
 0013-data-mount-stage.patch
-0015-ux-crash-diag.patch
 0017-text-repage.patch
 0018-sandbox-grant-entitlement.patch
-0019-dyld-debug-env.patch
-0020-console-capture.patch
-0022-init-capture-on.patch
-0023-console-write-capture.patch
-0025-early-screen-log.patch
-0028-cnputs-capture.patch
-0029-map-entry.patch
+0030-init-exception-snapshot.patch

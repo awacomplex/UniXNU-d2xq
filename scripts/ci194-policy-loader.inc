@@ -36,7 +36,6 @@ bool NativeUfsBlock::configureVerification ()
   const uint64_t blocks = (d.manifestBytes + 4095) / 4096;
   const uint64_t chunkBlocks = kDataMax / 4096;
   for (uint64_t base = 0; base < blocks; base += chunkBlocks) {
-    if ((base & 4095U) == 0) ci194Print (selected ? "CI194 S ": "CI194 O ");
     const uint32_t count = static_cast<uint32_t> (blocks - base < chunkBlocks ? blocks - base : chunkBlocks);
     gRootDiagnostic.stage = "CI194 fixed policy READ10";
     if (hostRead4k (0, d.firstLba + base, count, bounce) != kIOReturnSuccess) return reject ();

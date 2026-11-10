@@ -89,14 +89,14 @@ extern "C" void native_ufs_ci194_finish (void)
 {
   if (!gCi194Entered || !gCi194LayoutStarted || gCi194FinishEntered) ci194Fail ("finish entry state");
   gCi194FinishEntered = true;
-  ci194Print ("CI194 FIN ");
+
   ci194Transport ();
   // SourceStorage calls this only after the original bsd_autoconf has published
   // IOBSD, and before setconf/mountroot. This function never returns to them.
-  ci194Print ("CI194 FIN-APFS ");
+
   const OSReturn loaded = OSKextLoadKextWithIdentifier ("com.apple.filesystems.apfs");
   if (loaded != kOSReturnSuccess) ci194Fail ("real APFS kext load");
-  ci194Print ("CI194 FIN-APFSOK ");
+
   if (ci194DoneSem) {
     semaphore_wait (ci194DoneSem);
   } else {
@@ -115,7 +115,7 @@ extern "C" void native_ufs_ci194_finish (void)
       ci194Fail ("signed UUID unavailable");
     ci194TagMedia (gCi194Windows[p], uuid);
     (void) native_verified_block_volume_device (uuid, &devices[p], path, sizeof (path));
-    ci194Print ("CI194 FIN-UUID ");
+
     if (native_ufs_block_authenticates (gCi194Windows[p], other, nullptr) != 0 ||
         native_ufs_block_authenticates (gCi194Windows[p], uuid, nullptr) != 1)
       ci194Fail ("cross-window authorization accepted");
@@ -128,7 +128,7 @@ extern "C" void native_ufs_ci194_finish (void)
       !native_ufs_block_reads || !native_ufs_verified_blocks ||
       !gCi194WindowVerified[0] || !gCi194WindowVerified[1]) ci194Fail ("media identity or integrity counters");
   RootLayout final = {}; const char *why = "";
-  ci194Print ("CI194 FIN-SECT ");
+
   if (!findRootLayout (&final, &why, gHost.rootBlocks)) ci194Fail ("final root/GPT parse");
   ci194Snapshot (final, true);
   ci194Transport ();
