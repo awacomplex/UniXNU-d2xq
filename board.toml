@@ -71,8 +71,7 @@ archives = [
   "component:ShengUfs",
   # 源构建块存储运行时：编译公开 IOBlockStorageDevice（改名晚注册）+ NativeUfs/NativeRamBlock
   # 并覆盖 build/sheng-ufs/libShengUfs.a 供 NATIVE_UFS 链接
-  # Verified root: sign/verify the original OS and SystemOS policies, then bundle
-  # the real VerifiedRoot provider for CONFIG_XNU_VERIFIED_ROOT_ARCHIVE.
+  # Compile the real verifier with the existing external CI194 policy anchor.
   "build-d2xq-source-storage.py",
   # Bind the source-built storage driver's IOStorageFamily imports, then the verified
   # virtio block driver's, sharing the same recorded original addresses.

@@ -320,9 +320,8 @@ def main():
         else:
             objects.append(late_object(obj, symbol))
 
-    # VerifiedRoot and the immutable policy data now come from
-    # build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a, and NativeRamBlock
-    # from build/ram-block; keep this archive to UFS plus the runtime glue.
+    # The existing CI194 anchor/descriptors bind the policies staged on UFS.
+    # No freshly generated owner key or full embedded policy table is linked.
     policy_source = DEVICE / 'package/CI194PolicyData.cpp'
     policy_record = json.loads(policy_source.with_suffix('.json').read_text())
     policy_bytes = policy_source.read_text().encode().replace(b'\r\n', b'\n')
@@ -361,6 +360,7 @@ def main():
     kit = ROOT / 'kits/VerifiedRoot'
     c_recipe = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/bsd/DEVELOPMENT/bsd_init.o.json'
     c_record = json.loads(c_recipe.read_text().strip().rstrip(','))
+    verifier_objects = []
     for relative in ('src/verified_root.c', 'adapters/xnu_crypto.c'):
         source = kit / relative
         obj = OUT / (source.stem + '.o')
@@ -369,16 +369,14 @@ def main():
         (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
         if result.returncode:
             sys.exit((result.stdout + result.stderr)[-4000:])
-        objects.append(obj)
-    # The build gates require CONFIG_XNU_VERIFIED_ROOT_ARCHIVE to exist; the real
-    # verifier objects are already in this archive, so the file stays empty.
-    placeholder = ROOT / 'build/verified-root-xnu/libVerifiedRootProbe.a'
-    placeholder.parent.mkdir(parents=True, exist_ok=True)
+        verifier_objects.append(obj)
+    provider = ROOT / 'build/verified-root-xnu/libVerifiedRoot.a'
+    provider.parent.mkdir(parents=True, exist_ok=True)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
-    placeholder.unlink(missing_ok=True)
-    subprocess.run([ar, 'rcs', str(placeholder)], check=True)
+    provider.unlink(missing_ok=True)
+    subprocess.run([ar, 'rcs', str(provider), *map(str, verifier_objects)], check=True)
     ARCHIVE.unlink(missing_ok=True)
     subprocess.run([ar, 'rcs', str(ARCHIVE), *map(str, objects)], check=True)
     # The UFS link force-loads the catalog archive; the RAM link force-loads its own.
