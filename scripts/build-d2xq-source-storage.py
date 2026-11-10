@@ -303,7 +303,7 @@ def main():
 
     record = load_record()
     objects = []
-    for source in (base_source, native_ufs, source_storage):
+    for source in (base_source, native_ufs, native_ram, source_storage):
         symbol = source.name
         obj = OUT / (source.stem + '.o')
         extra = (ufs_include, DEVICE / 'package', ROOT / 'kits/VerifiedRoot/include',
@@ -315,7 +315,10 @@ def main():
         (OUT / (source.stem + '.log')).write_text(result.stdout + result.stderr)
         if result.returncode:
             sys.exit((result.stdout + result.stderr)[-4000:])
-        objects.append(late_object(obj, symbol))
+        if source == native_ram:
+            objects.append(obj)
+        else:
+            objects.append(late_object(obj, symbol))
 
     # VerifiedRoot and the immutable policy data now come from
     # build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a, and NativeRamBlock
@@ -343,16 +346,6 @@ def main():
     if crypto_result.returncode:
         sys.exit((crypto_result.stdout + crypto_result.stderr)[-4000:])
     objects.append(crypto_obj)
-    # The catalog archive's late object keeps the compiler-emitted static initialiser
-    # of the RamBlock translation unit as an external reference; the RAM transport now
-    # lives in libRamBlock.a, so provide the empty initialiser here.
-    stub_source = OUT / 'native-ramblock-init.S'
-    stub_source.write_text('.text\n.globl __GLOBAL__sub_I_NativeRamBlock.cpp\n'
-                           '__GLOBAL__sub_I_NativeRamBlock.cpp:\n\tret\n')
-    stub_obj = OUT / 'native-ramblock-init.o'
-    subprocess.run(['clang', '-target', 'arm64-apple-ios17.0', '-c', str(stub_source),
-                    '-o', str(stub_obj)], check=True)
-    objects.append(stub_obj)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
