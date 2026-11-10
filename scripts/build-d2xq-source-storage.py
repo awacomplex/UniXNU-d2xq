@@ -346,6 +346,16 @@ def main():
     if crypto_result.returncode:
         sys.exit((crypto_result.stdout + crypto_result.stderr)[-4000:])
     objects.append(crypto_obj)
+    # The catalog archive refers to the RamBlock translation unit's static
+    # initialiser by name; provide a weak empty one so the link always resolves.
+    stub_source = OUT / 'native-ramblock-init.S'
+    stub_source.write_text('.text\n.globl __GLOBAL__sub_I_NativeRamBlock.cpp\n'
+                           '.weak_definition __GLOBAL__sub_I_NativeRamBlock.cpp\n'
+                           '__GLOBAL__sub_I_NativeRamBlock.cpp:\n\tret\n')
+    stub_obj = OUT / 'native-ramblock-init.o'
+    subprocess.run(['clang', '-target', 'arm64-apple-ios17.0', '-c', str(stub_source),
+                    '-o', str(stub_obj)], check=True)
+    objects.append(stub_obj)
     ar = shutil.which('llvm-ar') or shutil.which('ar')
     if not ar:
         sys.exit('llvm-ar not found')
